@@ -67,26 +67,34 @@ export class PlasmaProjectile extends Phaser.Physics.Arcade.Sprite {
    * Chrono Freeze interaction: pauses projectile in mid-air
    */
   freeze(duration) {
-    if (this.isFrozen) return;
+    if (this.isFrozen || !this.active) return;
     this.isFrozen = true;
 
-    this.storedVx = this.body.velocity.x;
-    this.storedVy = this.body.velocity.y;
-    this.setVelocity(0, 0);
+    if (this.body && this.body.velocity) {
+      this.storedVx = this.body.velocity.x;
+      this.storedVy = this.body.velocity.y;
+      this.setVelocity(0, 0);
+    } else {
+      this.storedVx = this.dirX * this.speed;
+      this.storedVy = this.dirY * this.speed;
+    }
+
     this.setAngularVelocity(0);
 
     // Cyan frost tint
     this.setTint(0x00f0ff);
 
-    this.frostNode = this.scene.add.image(this.x, this.y, 'vfx_freeze_crystal').setScale(1.2).setDepth(19);
+    if (this.scene) {
+      this.frostNode = this.scene.add.image(this.x, this.y, 'vfx_freeze_crystal').setScale(1.2).setDepth(19);
 
-    this.scene.time.delayedCall(duration, () => {
-      this.thaw();
-    });
+      this.scene.time.delayedCall(duration, () => {
+        this.thaw();
+      });
+    }
   }
 
   thaw() {
-    if (!this.isFrozen) return;
+    if (!this.isFrozen || !this.active) return;
     this.isFrozen = false;
     this.clearTint();
 
@@ -95,9 +103,13 @@ export class PlasmaProjectile extends Phaser.Physics.Arcade.Sprite {
       this.frostNode = null;
     }
 
-    ChronoVFX.spawnFreezeRelease(this.scene, this.x, this.y);
+    if (this.scene) {
+      ChronoVFX.spawnFreezeRelease(this.scene, this.x, this.y);
+    }
 
-    this.setVelocity(this.storedVx, this.storedVy);
+    if (this.body) {
+      this.setVelocity(this.storedVx, this.storedVy);
+    }
     this.setAngularVelocity(180);
   }
 

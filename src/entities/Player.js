@@ -24,6 +24,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.isDashing = false;
     this.isSliding = false;
     this.isInvulnerable = false;
+    this.wasGrounded = true;
+    this.footstepTimer = 0;
     this.dashTimer = null;
     this.slideTimer = null;
     this.afterimageTimer = null;
@@ -43,15 +45,34 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     const isGrounded = this.body.blocked.down || this.body.touching.down;
 
+    // Landing detection: transition from airborne to grounded
+    if (!this.wasGrounded && isGrounded && !this.isSliding) {
+      // Squash & stretch recovery
+      this.scene.tweens.add({
+        targets: this,
+        scaleX: 1.15,
+        scaleY: 0.88,
+        duration: 70,
+        yoyo: true,
+        ease: 'Quad.easeOut',
+        onComplete: () => {
+          if (!this.isSliding) this.setScale(1, 1);
+        }
+      });
+      ChronoVFX.spawnLandingDust(this.scene, this.x, this.y + 22);
+    }
+
     // 1. Sliding
     if ((keys.S.isDown || cursors.down.isDown) && isGrounded && !this.isSliding) {
       this.startSlide();
+      this.wasGrounded = isGrounded;
       return;
     }
 
     if (this.isSliding) {
       // Maintain slide velocity in facing direction
       this.setVelocityX(this.facing * this.slideVelocity);
+      this.wasGrounded = isGrounded;
       return;
     }
 
@@ -60,29 +81,66 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       this.setVelocityX(-this.runSpeed);
       this.facing = -1;
       this.setFlipX(true);
+      if (isGrounded) {
+        this.setAngle(-4); // Dynamic running stride tilt
+        this.footstepTimer += 16;
+        if (this.footstepTimer > 180) {
+          this.footstepTimer = 0;
+          ChronoVFX.spawnFootstepSpark(this.scene, this.x, this.y, this.facing);
+        }
+      }
     } else if (cursors.right.isDown || keys.D.isDown) {
       this.setVelocityX(this.runSpeed);
       this.facing = 1;
       this.setFlipX(false);
+      if (isGrounded) {
+        this.setAngle(4); // Dynamic running stride tilt
+        this.footstepTimer += 16;
+        if (this.footstepTimer > 180) {
+          this.footstepTimer = 0;
+          ChronoVFX.spawnFootstepSpark(this.scene, this.x, this.y, this.facing);
+        }
+      }
     } else {
       this.setVelocityX(0);
+      if (isGrounded) this.setAngle(0);
     }
 
     // 3. Jump
     if ((Phaser.Input.Keyboard.JustDown(cursors.up) || Phaser.Input.Keyboard.JustDown(keys.SPACE)) && isGrounded) {
       this.setVelocityY(this.jumpVelocity);
+      this.setTexture('player_avatar_jump');
+      this.scene.tweens.add({
+        targets: this,
+        scaleX: 0.92,
+        scaleY: 1.08,
+        duration: 90,
+        yoyo: true,
+        ease: 'Quad.easeOut'
+      });
       // Small takeoff dust effect
       this.scene.add.image(this.x, this.y + 22, 'particle_cyan').setScale(0.7).setAlpha(0.6);
     }
+
+    // 4. State-driven Poses
+    if (!isGrounded && !this.isSliding) {
+      this.setTexture('player_avatar_jump');
+      this.setAngle(this.facing * (this.body.velocity.y < 0 ? -2 : 3));
+    } else if (!this.isSliding) {
+      this.setTexture('player_avatar');
+    }
+
+    this.wasGrounded = isGrounded;
   }
 
   startSlide() {
     this.isSliding = true;
+    this.setTexture('player_avatar_slide');
     // Reduce collision height safely
     this.body.setSize(24, 24);
     this.body.setOffset(4, 24);
     this.setVelocityX(this.facing * this.slideVelocity);
-    this.setAngle(this.facing * 18); // Dynamic slide pose tilt
+    this.setAngle(this.facing * 12); // Dynamic slide pose tilt
 
     if (this.slideTimer) this.slideTimer.remove();
     this.slideTimer = this.scene.time.delayedCall(GAME_SETTINGS.PLAYER.SLIDE_DURATION_MS, () => {
@@ -92,7 +150,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   stopSlide() {
     this.isSliding = false;
+    this.setTexture('player_avatar');
     this.setAngle(0);
+    this.setScale(1, 1);
     // Restore standing collision box safely
     this.body.setSize(24, 46);
     this.body.setOffset(4, 2);

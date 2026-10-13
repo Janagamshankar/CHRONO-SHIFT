@@ -309,4 +309,46 @@ export class ChronoVFX {
       });
     }
   }
+
+  /**
+   * Spawns bilateral landing dust puffs when player lands from air
+   */
+  static spawnLandingDust(scene, x, y) {
+    [-1, 1].forEach(dir => {
+      const dust = scene.add.image(x + dir * 6, y, 'vfx_landing_dust').setDepth(16);
+      dust.setScale(0.8);
+      dust.setAlpha(0.75);
+
+      scene.tweens.add({
+        targets: dust,
+        x: x + dir * 20,
+        alpha: 0,
+        scaleX: 1.3,
+        scaleY: 0.4,
+        duration: 220,
+        ease: 'Quad.easeOut',
+        onComplete: () => dust.destroy()
+      });
+    });
+  }
+
+  /**
+   * Spawns subtle footstep friction micro-spark when running
+   */
+  static spawnFootstepSpark(scene, x, y, facing = 1) {
+    const spark = scene.add.image(x - facing * 8, y + 20, 'particle_cyan').setDepth(16);
+    spark.setScale(0.35);
+    spark.setAlpha(0.65);
+
+    scene.tweens.add({
+      targets: spark,
+      x: x - facing * 16,
+      y: y + 16,
+      alpha: 0,
+      scale: 0.1,
+      duration: 160,
+      ease: 'Linear',
+      onComplete: () => spark.destroy()
+    });
+  }
 }

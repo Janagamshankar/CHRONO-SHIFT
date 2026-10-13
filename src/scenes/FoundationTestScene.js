@@ -40,10 +40,55 @@ export default class FoundationTestScene extends Phaser.Scene {
     // 3. Parallax Environment (Anchored with Camera Tracking)
     this.bgSkyGradient = this.add.image(width / 2, height / 2, 'bg_sky_gradient').setDepth(0);
 
+    // Celestial Fractured Temporal Moon (Very slow deep celestial drift)
+    this.bgMoon = this.add.image(width / 2, 140, 'celestial_temporal_moon').setDepth(1).setAlpha(0.85);
+
     this.bgSkyline = this.add.tileSprite(width / 2, 360, width, 400, 'bg_distant_skyline').setDepth(2).setAlpha(0.65);
     this.bgCloudsBack = this.add.tileSprite(width / 2, 450, width, 240, 'cloud_bank_layer').setDepth(3).setAlpha(0.75);
     this.bgCity = this.add.tileSprite(width / 2, 460, width, 450, 'bg_midground_city').setDepth(4).setAlpha(0.9);
     this.bgCloudsFront = this.add.tileSprite(width / 2, 530, width, 240, 'cloud_bank_layer').setDepth(5).setAlpha(0.5);
+
+    // Distant Skyway Transit Traffic
+    this.skyCruisers = [];
+    const cruiserY = [220, 260, 310, 350];
+    cruiserY.forEach((cy, idx) => {
+      const c = this.add.image(idx * 800 + 200, cy, 'bg_skyway_traffic').setDepth(2);
+      c.setAlpha(0.7);
+      c.speed = 45 + idx * 25;
+      this.skyCruisers.push(c);
+    });
+
+    // Near-Background Structural Tech Conduits
+    const conduitPositions = [600, 1220, 1800, 2480, 3100, 3760, 4400];
+    conduitPositions.forEach(cx => {
+      const cond = this.add.image(cx, 440, 'near_tech_conduits').setDepth(13).setAlpha(0.6);
+      cond.setScale(1.2);
+    });
+
+    // Holographic Gateway Arches at Section Boundaries
+    const gateways = [
+      { x: 1280, label: '// GATEWAY 02: BROKEN TIMELINE //' },
+      { x: 2560, label: '// GATEWAY 03: ZERO ZONE //' },
+      { x: 3840, label: '// GATEWAY 04: CHRONO CORE //' }
+    ];
+
+    gateways.forEach(g => {
+      // Dual boundary laser pillar lines
+      const gBeam = this.add.graphics().setDepth(14);
+      gBeam.lineStyle(2, 0x00f0ff, 0.45);
+      gBeam.lineBetween(g.x, 260, g.x, groundY);
+      gBeam.lineStyle(1, 0xa855f7, 0.7);
+      gBeam.lineBetween(g.x + 8, 260, g.x + 8, groundY);
+
+      // Overhead holographic banner
+      this.add.text(g.x, 280, g.label, {
+        fontFamily: 'Orbitron, sans-serif',
+        fontSize: '11px',
+        fontStyle: 'bold',
+        color: '#00f0ff',
+        letterSpacing: 2
+      }).setOrigin(0.5).setDepth(20);
+    });
 
     // 4. Ground Platforms & Suspended World Architecture
     this.groundPlatforms = this.physics.add.staticGroup();
@@ -428,12 +473,7 @@ export default class FoundationTestScene extends Phaser.Scene {
     // Q: Chrono Freeze activation
     this.input.keyboard.on('keydown-Q', () => {
       if (this.isLevelComplete) return;
-      const allTargets = [
-        ...this.eligibleHazards,
-        ...this.plasmaTurret1.projectiles.getChildren(),
-        ...this.plasmaTurret2.projectiles.getChildren()
-      ];
-      const res = this.player.activateChronoFreeze(allTargets);
+      const res = this.player.activateChronoFreeze(this.eligibleHazards);
       this.hud.triggerAbilityPulse('freeze', res.success);
     });
 
@@ -552,6 +592,9 @@ export default class FoundationTestScene extends Phaser.Scene {
 
     // 1. Dynamic Camera-Anchored Parallax Scrolling
     this.bgSkyGradient.x = camX + width / 2;
+    if (this.bgMoon) {
+      this.bgMoon.x = camX * 0.05 + width / 2 + 120;
+    }
 
     if (!isReduced) {
       this.bgSkyline.x = camX + width / 2;
@@ -565,6 +608,14 @@ export default class FoundationTestScene extends Phaser.Scene {
 
       this.bgCloudsFront.x = camX + width / 2;
       this.bgCloudsFront.tilePositionX = camX * 0.65 + time * 0.02;
+
+      // Update Skyway Cruisers
+      if (this.skyCruisers) {
+        this.skyCruisers.forEach(c => {
+          c.x += (c.speed * delta) / 1000;
+          if (c.x > 5300) c.x = -100;
+        });
+      }
     }
 
     // 2. Player Movement Update

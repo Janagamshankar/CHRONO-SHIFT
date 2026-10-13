@@ -93,23 +93,98 @@ export default class PreloadScene extends Phaser.Scene {
     cellGfx.generateTexture('cell_orb', 32, 32);
     cellGfx.destroy();
 
-    // 4. Player Silhouette / Placeholder Avatar
+    // 4. Enhanced Cybernetic Operative Avatar (Kael Veyron)
     const playerGfx = this.make.graphics({ x: 0, y: 0, add: false });
-    // Head / visor
+    // Outer high-contrast rim-light silhouette (for dark/bright background readability)
+    playerGfx.lineStyle(1.5, 0x00f0ff, 0.9);
+    playerGfx.strokeRoundedRect(5, 3, 22, 42, 4);
+
+    // Dark armored chassis body
+    playerGfx.fillStyle(0x0a1124, 1);
+    playerGfx.fillRoundedRect(6, 4, 20, 40, 3);
+
+    // Helmet / Visor
+    playerGfx.fillStyle(0x0f172a, 1);
+    playerGfx.fillRoundedRect(8, 5, 16, 12, 3);
+    // Glowing cyan visor with white-hot core
     playerGfx.fillStyle(0x00f0ff, 1);
-    playerGfx.fillRoundedRect(8, 4, 16, 12, 3);
-    // Torso & Chrono Gauntlet
-    playerGfx.fillStyle(0x38bdf8, 1);
-    playerGfx.fillRect(6, 18, 20, 18);
-    // Gauntlet glow
-    playerGfx.fillStyle(0xa855f7, 1);
-    playerGfx.fillRect(22, 22, 6, 8);
-    // Legs
+    playerGfx.fillRoundedRect(12, 8, 12, 5, 2);
+    playerGfx.fillStyle(0xffffff, 1);
+    playerGfx.fillRect(15, 9, 8, 2);
+
+    // Torso armor plate & tech conduits
     playerGfx.fillStyle(0x1e293b, 1);
-    playerGfx.fillRect(7, 36, 8, 12);
-    playerGfx.fillRect(17, 36, 8, 12);
+    playerGfx.fillRect(8, 19, 16, 15);
+    playerGfx.fillStyle(0x38bdf8, 0.85);
+    playerGfx.fillRect(10, 21, 5, 9);
+
+    // Chrono Gauntlet on arm (Glowing violet temporal anomaly core)
+    playerGfx.fillStyle(0x475569, 1);
+    playerGfx.fillRect(20, 22, 8, 10);
+    playerGfx.fillStyle(0xa855f7, 1);
+    playerGfx.fillRect(23, 24, 4, 6);
+    playerGfx.fillStyle(0xffffff, 0.9);
+    playerGfx.fillRect(24, 25, 2, 4);
+
+    // Combat Greaves / Armored boots with anti-grav micro-emitters
+    playerGfx.fillStyle(0x0f172a, 1);
+    playerGfx.fillRect(8, 35, 7, 10);
+    playerGfx.fillRect(17, 35, 7, 10);
+    // Soles
+    playerGfx.fillStyle(0x00f0ff, 0.9);
+    playerGfx.fillRect(8, 43, 7, 2);
+    playerGfx.fillRect(17, 43, 7, 2);
+
     playerGfx.generateTexture('player_avatar', 32, 48);
     playerGfx.destroy();
+
+    // 4B. Airborne / Jumping Avatar Pose
+    const jumpGfx = this.make.graphics({ x: 0, y: 0, add: false });
+    jumpGfx.lineStyle(1.5, 0x00f0ff, 0.9);
+    jumpGfx.strokeRoundedRect(5, 3, 22, 42, 4);
+    jumpGfx.fillStyle(0x0a1124, 1);
+    jumpGfx.fillRoundedRect(6, 4, 20, 40, 3);
+    // Visor looking up/forward
+    jumpGfx.fillStyle(0x00f0ff, 1);
+    jumpGfx.fillRoundedRect(12, 7, 12, 5, 2);
+    jumpGfx.fillStyle(0xffffff, 1);
+    jumpGfx.fillRect(15, 8, 8, 2);
+    // Tucked legs
+    jumpGfx.fillStyle(0x1e293b, 1);
+    jumpGfx.fillRect(8, 19, 16, 14);
+    jumpGfx.fillStyle(0xa855f7, 1);
+    jumpGfx.fillRect(22, 21, 6, 8);
+    jumpGfx.fillStyle(0x0f172a, 1);
+    jumpGfx.fillRect(8, 33, 7, 8);
+    jumpGfx.fillRect(17, 33, 7, 8);
+    // Thruster glow underneath boots
+    jumpGfx.fillStyle(0x00f0ff, 1);
+    jumpGfx.fillCircle(11, 44, 3);
+    jumpGfx.fillCircle(20, 44, 3);
+    jumpGfx.generateTexture('player_avatar_jump', 32, 48);
+    jumpGfx.destroy();
+
+    // 4C. Low-Profile Slide Avatar Pose (32x28)
+    const slideGfx = this.make.graphics({ x: 0, y: 0, add: false });
+    slideGfx.lineStyle(1.5, 0x00f0ff, 0.9);
+    slideGfx.strokeRoundedRect(3, 4, 26, 22, 4);
+    slideGfx.fillStyle(0x0a1124, 1);
+    slideGfx.fillRoundedRect(4, 5, 24, 20, 3);
+    // Low visor
+    slideGfx.fillStyle(0x00f0ff, 1);
+    slideGfx.fillRect(16, 8, 10, 4);
+    slideGfx.fillStyle(0xffffff, 1);
+    slideGfx.fillRect(18, 9, 6, 2);
+    // Horizontal torso
+    slideGfx.fillStyle(0x1e293b, 1);
+    slideGfx.fillRect(6, 12, 20, 8);
+    slideGfx.fillStyle(0xa855f7, 1);
+    slideGfx.fillRect(8, 14, 5, 5);
+    // Sliding rear friction sparks
+    slideGfx.fillStyle(0x00f0ff, 0.9);
+    slideGfx.fillRect(2, 22, 26, 3);
+    slideGfx.generateTexture('player_avatar_slide', 32, 28);
+    slideGfx.destroy();
 
     // 5. Rotating Geometric Hazard (Triangular Blade)
     const hazardGfx = this.make.graphics({ x: 0, y: 0, add: false });
@@ -610,6 +685,82 @@ export default class PreloadScene extends Phaser.Scene {
     arrowGfx.fillPath();
     arrowGfx.generateTexture('trajectory_arrow', 32, 16);
     arrowGfx.destroy();
+
+    // 29. Fractured Celestial Temporal Moon / Gas Giant (140x140)
+    const moonGfx = this.make.graphics({ x: 0, y: 0, add: false });
+    // Outer orbital ring
+    moonGfx.lineStyle(2, 0x38bdf8, 0.4);
+    moonGfx.strokeEllipse(70, 70, 136, 44);
+    // Dark planetary body
+    moonGfx.fillStyle(0x0b1329, 0.95);
+    moonGfx.fillCircle(70, 70, 48);
+    // Subtle crater shadows
+    moonGfx.fillStyle(0x070c1a, 0.7);
+    moonGfx.fillCircle(54, 58, 14);
+    moonGfx.fillCircle(82, 80, 18);
+    moonGfx.fillCircle(85, 52, 10);
+    // Illuminated crescent horizon rim
+    moonGfx.lineStyle(3, 0x00f0ff, 0.85);
+    moonGfx.beginPath();
+    moonGfx.arc(70, 70, 48, -Math.PI * 0.7, Math.PI * 0.1);
+    moonGfx.strokePath();
+    moonGfx.lineStyle(1.5, 0xffffff, 0.95);
+    moonGfx.beginPath();
+    moonGfx.arc(70, 70, 48, -Math.PI * 0.55, -Math.PI * 0.05);
+    moonGfx.strokePath();
+    // Violet temporal anomaly fracture fissures
+    moonGfx.lineStyle(2, 0xa855f7, 0.85);
+    moonGfx.lineBetween(48, 62, 68, 74);
+    moonGfx.lineBetween(68, 74, 92, 66);
+    moonGfx.fillStyle(0xffffff, 0.9);
+    moonGfx.fillCircle(68, 74, 2.5);
+    moonGfx.generateTexture('celestial_temporal_moon', 140, 140);
+    moonGfx.destroy();
+
+    // 30. Distant Skyway Transit Cruiser (28x10)
+    const trafficGfx = this.make.graphics({ x: 0, y: 0, add: false });
+    trafficGfx.fillStyle(0x0f1c3f, 0.9);
+    trafficGfx.fillRoundedRect(0, 2, 28, 6, 2);
+    // Headlight
+    trafficGfx.fillStyle(0x00f0ff, 1);
+    trafficGfx.fillRect(24, 3, 4, 4);
+    // Tail thruster
+    trafficGfx.fillStyle(0xf59e0b, 1);
+    trafficGfx.fillRect(0, 3, 4, 4);
+    trafficGfx.generateTexture('bg_skyway_traffic', 28, 10);
+    trafficGfx.destroy();
+
+    // 31. Near-Background Tech Cable Conduits (128x220)
+    const conduitGfx = this.make.graphics({ x: 0, y: 0, add: false });
+    conduitGfx.lineStyle(2, 0x1e293b, 0.8);
+    // Vertical conduit trunk with diagonal tech braces
+    conduitGfx.lineBetween(16, 0, 16, 220);
+    conduitGfx.lineBetween(32, 0, 32, 220);
+    conduitGfx.lineBetween(16, 40, 64, 90);
+    conduitGfx.lineBetween(64, 90, 64, 220);
+    conduitGfx.lineBetween(32, 80, 80, 130);
+    conduitGfx.lineBetween(80, 130, 80, 220);
+    // Glowing cyan data conduits
+    conduitGfx.lineStyle(1.5, 0x00f0ff, 0.7);
+    conduitGfx.lineBetween(24, 0, 24, 220);
+    conduitGfx.lineBetween(24, 60, 72, 110);
+    conduitGfx.lineBetween(72, 110, 72, 220);
+    // Conduit junction nodes
+    conduitGfx.fillStyle(0x00f0ff, 1);
+    conduitGfx.fillCircle(24, 60, 3);
+    conduitGfx.fillCircle(72, 110, 3);
+    conduitGfx.generateTexture('near_tech_conduits', 128, 220);
+    conduitGfx.destroy();
+
+    // 32. Landing Dust Puff (24x12)
+    const dustGfx = this.make.graphics({ x: 0, y: 0, add: false });
+    dustGfx.fillStyle(0x00f0ff, 0.5);
+    dustGfx.fillCircle(6, 6, 5);
+    dustGfx.fillCircle(18, 6, 5);
+    dustGfx.fillStyle(0xffffff, 0.7);
+    dustGfx.fillCircle(12, 6, 4);
+    dustGfx.generateTexture('vfx_landing_dust', 24, 12);
+    dustGfx.destroy();
   }
 
   create() {

@@ -242,6 +242,9 @@ export default class FoundationTestScene extends Phaser.Scene {
             sectionId: cp.sectionId,
             title: cp.sectionTitle
           };
+          if (this.hud && this.hud.showCheckpointBanner) {
+            this.hud.showCheckpointBanner(cp.sectionId, cp.sectionTitle);
+          }
         }
       });
     });
@@ -624,11 +627,19 @@ export default class FoundationTestScene extends Phaser.Scene {
       letterSpacing: 2
     }).setOrigin(0.5);
 
-    // Buttons Container
-    const btnW = 280;
-    const btnH = 40;
-    const startY = -60;
-    const spacing = 52;
+    modal.add([overlay, box, title, subtitle]);
+
+    // Sub-containers for Main Pause Actions and Settings View
+    const actionsContainer = this.add.container(0, 0);
+    const settingsContainer = this.add.container(0, 0);
+    modal.add([actionsContainer, settingsContainer]);
+    settingsContainer.setVisible(false);
+
+    // --- MAIN PAUSE ACTIONS ---
+    const btnW = 300;
+    const btnH = 38;
+    const startY = -62;
+    const spacing = 48;
 
     const pauseActions = [
       {
@@ -644,6 +655,16 @@ export default class FoundationTestScene extends Phaser.Scene {
         action: () => {
           this.resumeGame();
           this.handlePlayerDeath();
+        }
+      },
+      {
+        label: 'AUDIO & SYSTEM SETTINGS',
+        color: 0x1e293b,
+        textColor: '#e2e8f0',
+        action: () => {
+          actionsContainer.setVisible(false);
+          settingsContainer.setVisible(true);
+          subtitle.setText('SYSTEM CONFIGURATION • LIVE AUDIO ADJUSTMENTS');
         }
       },
       {
@@ -665,8 +686,6 @@ export default class FoundationTestScene extends Phaser.Scene {
         }
       }
     ];
-
-    modal.add([overlay, box, title, subtitle]);
 
     pauseActions.forEach((act, idx) => {
       const bY = startY + idx * spacing;
@@ -697,9 +716,144 @@ export default class FoundationTestScene extends Phaser.Scene {
         act.action();
       });
 
-      modal.add(btn);
+      actionsContainer.add(btn);
     });
 
+    // --- SETTINGS VIEW ---
+    const buildSettingsView = () => {
+      settingsContainer.removeAll(true);
+      const sStartY = -70;
+      const sRowH = 46;
+
+      const items = [
+        { key: 'masterVolume', label: 'MASTER VOL', step: 10, min: 0, max: 100 },
+        { key: 'musicVolume', label: 'MUSIC VOL', step: 10, min: 0, max: 100 },
+        { key: 'sfxVolume', label: 'SFX VOL', step: 10, min: 0, max: 100 },
+        { key: 'reducedMotion', label: 'REDUCED MOTION', isToggle: true }
+      ];
+
+      items.forEach((item, idx) => {
+        const rY = sStartY + idx * sRowH;
+        const rowLabel = this.add.text(-220, rY, item.label, {
+          fontFamily: 'Orbitron, sans-serif',
+          fontSize: '12px',
+          fontStyle: 'bold',
+          color: '#94a3b8',
+          letterSpacing: 1
+        }).setOrigin(0, 0.5);
+        settingsContainer.add(rowLabel);
+
+        if (item.isToggle) {
+          const isReduced = settingsManager.get('reducedMotion');
+          const toggleBtn = this.add.container(140, rY);
+          const tBg = this.add.graphics();
+          tBg.fillStyle(isReduced ? 0x00f0ff : 0x1e293b, 0.9);
+          tBg.fillRoundedRect(-45, -14, 90, 28, 4);
+          tBg.lineStyle(1.2, 0x38bdf8, 0.8);
+          tBg.strokeRoundedRect(-45, -14, 90, 28, 4);
+
+          const tTxt = this.add.text(0, 0, isReduced ? 'ENABLED' : 'DISABLED', {
+            fontFamily: 'Orbitron, sans-serif',
+            fontSize: '10px',
+            fontStyle: 'bold',
+            color: isReduced ? '#050814' : '#94a3b8'
+          }).setOrigin(0.5);
+
+          toggleBtn.add([tBg, tTxt]);
+          toggleBtn.setSize(90, 28);
+          toggleBtn.setInteractive({ useHandCursor: true });
+          toggleBtn.on('pointerdown', () => {
+            const next = !settingsManager.get('reducedMotion');
+            settingsManager.set('reducedMotion', next);
+            audioManager.play('uiClick');
+            buildSettingsView();
+          });
+          settingsContainer.add(toggleBtn);
+        } else {
+          const val = settingsManager.get(item.key);
+          const valTxt = this.add.text(140, rY, `${val}%`, {
+            fontFamily: 'Rajdhani, monospace',
+            fontSize: '16px',
+            fontWeight: '700',
+            color: '#00f0ff'
+          }).setOrigin(0.5);
+
+          // Minus button
+          const mBtn = this.add.container(90, rY);
+          const mBg = this.add.graphics();
+          mBg.fillStyle(0x1e293b, 0.9);
+          mBg.fillRoundedRect(-14, -14, 28, 28, 4);
+          mBg.lineStyle(1, 0x00f0ff, 0.7);
+          mBg.strokeRoundedRect(-14, -14, 28, 28, 4);
+          const mTxt = this.add.text(0, 0, '−', {
+            fontFamily: 'Orbitron, sans-serif',
+            fontSize: '14px',
+            fontStyle: 'bold',
+            color: '#00f0ff'
+          }).setOrigin(0.5);
+          mBtn.add([mBg, mTxt]);
+          mBtn.setSize(28, 28);
+          mBtn.setInteractive({ useHandCursor: true });
+          mBtn.on('pointerdown', () => {
+            const next = Math.max(item.min, val - item.step);
+            settingsManager.set(item.key, next);
+            audioManager.play('uiClick');
+            buildSettingsView();
+          });
+
+          // Plus button
+          const pBtn = this.add.container(190, rY);
+          const pBg = this.add.graphics();
+          pBg.fillStyle(0x1e293b, 0.9);
+          pBg.fillRoundedRect(-14, -14, 28, 28, 4);
+          pBg.lineStyle(1, 0x00f0ff, 0.7);
+          pBg.strokeRoundedRect(-14, -14, 28, 28, 4);
+          const pTxt = this.add.text(0, 0, '+', {
+            fontFamily: 'Orbitron, sans-serif',
+            fontSize: '14px',
+            fontStyle: 'bold',
+            color: '#00f0ff'
+          }).setOrigin(0.5);
+          pBtn.add([pBg, pTxt]);
+          pBtn.setSize(28, 28);
+          pBtn.setInteractive({ useHandCursor: true });
+          pBtn.on('pointerdown', () => {
+            const next = Math.min(item.max, val + item.step);
+            settingsManager.set(item.key, next);
+            audioManager.play('uiClick');
+            buildSettingsView();
+          });
+
+          settingsContainer.add([valTxt, mBtn, pBtn]);
+        }
+      });
+
+      // Back to pause menu button
+      const backBtn = this.add.container(0, 140);
+      const bBg = this.add.graphics();
+      bBg.fillStyle(0x00f0ff, 1);
+      bBg.fillRoundedRect(-120, -18, 240, 36, 4);
+      const bTxt = this.add.text(0, 0, '◄ RETURN TO PAUSE DIRECTIVES', {
+        fontFamily: 'Orbitron, sans-serif',
+        fontSize: '11px',
+        fontStyle: 'bold',
+        color: '#050814'
+      }).setOrigin(0.5);
+      backBtn.add([bBg, bTxt]);
+      backBtn.setSize(240, 36);
+      backBtn.setInteractive({ useHandCursor: true });
+      backBtn.on('pointerover', () => backBtn.setScale(1.03));
+      backBtn.on('pointerout', () => backBtn.setScale(1.0));
+      backBtn.on('pointerdown', () => {
+        audioManager.play('uiClick');
+        settingsContainer.setVisible(false);
+        actionsContainer.setVisible(true);
+        subtitle.setText('CHRONO RUNTIME HALTED • CHOOSE DIRECTIVE');
+      });
+      settingsContainer.add(backBtn);
+    };
+
+    buildSettingsView();
     this.pauseModal = modal;
   }
 
@@ -829,6 +983,9 @@ export default class FoundationTestScene extends Phaser.Scene {
       if (!this.visitedSections.has(secKey)) {
         this.visitedSections.add(secKey);
         this.score += 100;
+        if (secKey !== 'A' && this.hud && this.hud.showSectionBanner) {
+          this.hud.showSectionBanner(currentSection);
+        }
       }
     }
 

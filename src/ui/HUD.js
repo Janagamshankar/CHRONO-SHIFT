@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_SETTINGS } from '../config/gameConfig.js';
 import { audioManager } from '../systems/AudioManager.js';
+import { UIComponents } from './UIComponents.js';
 
 export class HUD {
   constructor(scene) {
@@ -10,20 +11,12 @@ export class HUD {
     this.container = scene.add.container(0, 0).setDepth(40);
     this.container.setScrollFactor(0); // Anchors HUD to screen viewport
 
-    // Audio status indicator badge (bottom left)
-    const audioBadgeX = 24;
-    const audioBadgeY = height - 44;
-    this.audioBadge = scene.add.container(audioBadgeX + 60, audioBadgeY);
-    const badgeBg = scene.add.graphics();
-    const updateAudioBadgeGfx = (isMuted) => {
-      badgeBg.clear();
-      badgeBg.fillStyle(0x070c1b, 0.85);
-      badgeBg.fillRoundedRect(-60, -14, 120, 28, 4);
-      badgeBg.lineStyle(1.2, isMuted ? 0xef4444 : 0x00f0ff, 0.6);
-      badgeBg.strokeRoundedRect(-60, -14, 120, 28, 4);
-    };
-    updateAudioBadgeGfx(audioManager.isMuted);
+    // 1. Bottom Left: Quick Operations Bar ([M] Audio, [P] Pause, [R] Restart)
+    const barY = height - 42;
 
+    // Audio Toggle Badge
+    this.audioBadge = scene.add.container(70, barY);
+    this.audioGfx = scene.add.graphics();
     this.audioText = scene.add.text(0, 0, audioManager.isMuted ? '[M] MUTED' : '[M] AUDIO ON', {
       fontFamily: 'Orbitron, sans-serif',
       fontSize: '11px',
@@ -32,139 +25,210 @@ export class HUD {
       letterSpacing: 1
     }).setOrigin(0.5);
 
-    this.audioBadge.add([badgeBg, this.audioText]);
-    this.audioBadge.setSize(120, 28);
+    this.audioBadge.add([this.audioGfx, this.audioText]);
+    this.audioBadge.setSize(110, 28);
     this.audioBadge.setInteractive({ useHandCursor: true });
     this.audioBadge.on('pointerdown', () => {
       const muted = audioManager.toggleMute();
       this.updateAudioBadge(muted);
       audioManager.play('uiClick');
     });
+    this.updateAudioBadgeGfx(audioManager.isMuted);
 
-    this.container.add(this.audioBadge);
+    // Pause Hint Badge
+    this.pauseBadge = scene.add.container(170, barY);
+    const pauseGfx = scene.add.graphics();
+    pauseGfx.fillStyle(0x070c1b, 0.85);
+    pauseGfx.fillRoundedRect(-38, -14, 76, 28, 4);
+    pauseGfx.lineStyle(1.2, 0x1e293b, 0.8);
+    pauseGfx.strokeRoundedRect(-38, -14, 76, 28, 4);
+    const pauseText = scene.add.text(0, 0, '[P] PAUSE', {
+      fontFamily: 'Rajdhani, sans-serif',
+      fontSize: '12px',
+      fontWeight: '700',
+      color: '#94a3b8',
+      letterSpacing: 1
+    }).setOrigin(0.5);
+    this.pauseBadge.add([pauseGfx, pauseText]);
+    this.pauseBadge.setSize(76, 28);
+    this.pauseBadge.setInteractive({ useHandCursor: true });
+    this.pauseBadge.on('pointerdown', () => {
+      if (this.scene.pauseGame) this.scene.pauseGame();
+    });
 
-    // 1. Top Left: Operative Vitals Frame
+    // Restart Hint Badge
+    this.restartBadge = scene.add.container(265, barY);
+    const restartGfx = scene.add.graphics();
+    restartGfx.fillStyle(0x070c1b, 0.85);
+    restartGfx.fillRoundedRect(-44, -14, 88, 28, 4);
+    restartGfx.lineStyle(1.2, 0x1e293b, 0.8);
+    restartGfx.strokeRoundedRect(-44, -14, 88, 28, 4);
+    const restartText = scene.add.text(0, 0, '[R] RESTART', {
+      fontFamily: 'Rajdhani, sans-serif',
+      fontSize: '12px',
+      fontWeight: '700',
+      color: '#94a3b8',
+      letterSpacing: 1
+    }).setOrigin(0.5);
+    this.restartBadge.add([restartGfx, restartText]);
+    this.restartBadge.setSize(88, 28);
+    this.restartBadge.setInteractive({ useHandCursor: true });
+    this.restartBadge.on('pointerdown', () => {
+      if (this.scene.handlePlayerDeath) this.scene.handlePlayerDeath();
+    });
+
+    // 2. Top Left: Operative Vitals Frame (Health & Chrono Energy)
     const vitalsX = 24;
     const vitalsY = 20;
+    const vitalsW = 280;
+    const vitalsH = 80;
 
-    // Vitals panel background
     const vitalsBg = scene.add.graphics();
-    vitalsBg.fillStyle(0x070c1b, 0.88);
-    vitalsBg.fillRoundedRect(vitalsX, vitalsY, 260, 72, 6);
+    vitalsBg.fillStyle(0x070c1b, 0.92);
+    vitalsBg.fillRoundedRect(vitalsX, vitalsY, vitalsW, vitalsH, 6);
     vitalsBg.lineStyle(1.5, 0x1e293b, 0.8);
-    vitalsBg.strokeRoundedRect(vitalsX, vitalsY, 260, 72, 6);
+    vitalsBg.strokeRoundedRect(vitalsX, vitalsY, vitalsW, vitalsH, 6);
 
-    // Health bar container & graphics
+    // Corner tech notches on vitals frame
+    vitalsBg.lineStyle(2, 0x00f0ff, 0.9);
+    vitalsBg.lineBetween(vitalsX, vitalsY + 10, vitalsX, vitalsY);
+    vitalsBg.lineBetween(vitalsX, vitalsY, vitalsX + 10, vitalsY);
+
+    // Health bar elements
     this.healthFill = scene.add.graphics();
-    const hpLabel = scene.add.text(vitalsX + 14, vitalsY + 12, 'HP', {
-      fontFamily: 'Orbitron, sans-serif',
-      fontSize: '11px',
-      fontStyle: 'bold',
-      color: '#ef4444'
-    });
-    this.hpText = scene.add.text(vitalsX + 210, vitalsY + 12, '100', {
-      fontFamily: 'Rajdhani, monospace',
-      fontSize: '13px',
-      color: '#cbd5e1'
-    }).setOrigin(1, 0);
-
-    // Energy bar container & graphics
-    this.energyFill = scene.add.graphics();
-    const epLabel = scene.add.text(vitalsX + 14, vitalsY + 40, 'CHRONO', {
+    const hpLabel = scene.add.text(vitalsX + 14, vitalsY + 12, 'VITALITY', {
       fontFamily: 'Orbitron, sans-serif',
       fontSize: '10px',
       fontStyle: 'bold',
-      color: '#00f0ff'
+      color: '#ef4444',
+      letterSpacing: 1
     });
-    this.epText = scene.add.text(vitalsX + 210, vitalsY + 40, '100', {
+    this.hpText = scene.add.text(vitalsX + vitalsW - 14, vitalsY + 11, '100 / 100', {
       fontFamily: 'Rajdhani, monospace',
       fontSize: '13px',
+      fontWeight: '700',
+      color: '#f8fafc'
+    }).setOrigin(1, 0);
+
+    // Energy bar elements
+    this.energyFill = scene.add.graphics();
+    const epLabel = scene.add.text(vitalsX + 14, vitalsY + 44, 'CHRONO ENERGY', {
+      fontFamily: 'Orbitron, sans-serif',
+      fontSize: '10px',
+      fontStyle: 'bold',
+      color: '#00f0ff',
+      letterSpacing: 1
+    });
+    this.epText = scene.add.text(vitalsX + vitalsW - 14, vitalsY + 43, '100 / 100', {
+      fontFamily: 'Rajdhani, monospace',
+      fontSize: '13px',
+      fontWeight: '700',
       color: '#00f0ff'
     }).setOrigin(1, 0);
 
-    // 2. Top Center: Mission Countdown & Objective
+    // 3. Top Center: Zero Second Mission Clock
     const centerCardX = width / 2;
     const centerCardY = 22;
 
     const timerBg = scene.add.graphics();
-    timerBg.fillStyle(0x070c1b, 0.88);
-    timerBg.fillRoundedRect(centerCardX - 160, centerCardY, 320, 52, 6);
-    timerBg.lineStyle(1.5, 0x00f0ff, 0.6);
-    timerBg.strokeRoundedRect(centerCardX - 160, centerCardY, 320, 52, 6);
+    timerBg.fillStyle(0x070c1b, 0.92);
+    timerBg.fillRoundedRect(centerCardX - 160, centerCardY, 320, 56, 6);
+    timerBg.lineStyle(1.5, 0x00f0ff, 0.7);
+    timerBg.strokeRoundedRect(centerCardX - 160, centerCardY, 320, 56, 6);
 
-    const timerHeader = scene.add.text(centerCardX, centerCardY + 10, 'ZERO SECOND COUNTDOWN', {
+    // Corner notches
+    timerBg.lineStyle(2, 0x00f0ff, 1);
+    timerBg.lineBetween(centerCardX - 160, centerCardY + 10, centerCardX - 160, centerCardY);
+    timerBg.lineBetween(centerCardX - 160, centerCardY, centerCardX - 150, centerCardY);
+    timerBg.lineBetween(centerCardX + 150, centerCardY, centerCardX + 160, centerCardY);
+    timerBg.lineBetween(centerCardX + 160, centerCardY, centerCardX + 160, centerCardY + 10);
+
+    const timerHeader = scene.add.text(centerCardX, centerCardY + 12, 'ZERO SECOND COUNTDOWN', {
       fontFamily: 'Rajdhani, sans-serif',
       fontSize: '11px',
       fontWeight: '700',
       color: '#94a3b8',
-      letterSpacing: 2
+      letterSpacing: 3
     }).setOrigin(0.5);
 
-    this.timerText = scene.add.text(centerCardX, centerCardY + 32, '03:00', {
+    this.timerText = scene.add.text(centerCardX, centerCardY + 34, '03:00', {
       fontFamily: 'Orbitron, monospace',
-      fontSize: '20px',
+      fontSize: '22px',
       fontStyle: 'bold',
       color: '#00f0ff',
       letterSpacing: 3
     }).setOrigin(0.5);
 
-    // 3. Top Right: Score & Section Progression Card
-    const scoreX = width - 240;
+    // 4. Top Right: Score & Progression Sector Card
+    const scoreX = width - 260;
     const scoreY = 20;
+    const scoreW = 236;
+    const scoreH = 80;
 
     const scoreBg = scene.add.graphics();
-    scoreBg.fillStyle(0x070c1b, 0.88);
-    scoreBg.fillRoundedRect(scoreX, scoreY, 216, 72, 6);
+    scoreBg.fillStyle(0x070c1b, 0.92);
+    scoreBg.fillRoundedRect(scoreX, scoreY, scoreW, scoreH, 6);
     scoreBg.lineStyle(1.5, 0x1e293b, 0.8);
-    scoreBg.strokeRoundedRect(scoreX, scoreY, 216, 72, 6);
+    scoreBg.strokeRoundedRect(scoreX, scoreY, scoreW, scoreH, 6);
 
-    const scoreTitle = scene.add.text(scoreX + 16, scoreY + 12, 'SCORE', {
+    scoreBg.lineStyle(2, 0x00f0ff, 0.9);
+    scoreBg.lineBetween(scoreX + scoreW - 10, scoreY, scoreX + scoreW, scoreY);
+    scoreBg.lineBetween(scoreX + scoreW, scoreY, scoreX + scoreW, scoreY + 10);
+
+    const scoreTitle = scene.add.text(scoreX + 16, scoreY + 14, 'OPERATIVE SCORE', {
       fontFamily: 'Orbitron, sans-serif',
-      fontSize: '11px',
+      fontSize: '10px',
       fontStyle: 'bold',
-      color: '#00f0ff'
+      color: '#00f0ff',
+      letterSpacing: 1
     });
 
-    this.scoreText = scene.add.text(scoreX + 200, scoreY + 10, '0000', {
+    this.scoreText = scene.add.text(scoreX + scoreW - 16, scoreY + 12, '0000', {
       fontFamily: 'Orbitron, monospace',
       fontSize: '16px',
       fontStyle: 'bold',
-      color: '#e2e8f0'
+      color: '#f8fafc'
     }).setOrigin(1, 0);
 
-    const sectionTitle = scene.add.text(scoreX + 16, scoreY + 42, 'ZONE', {
-      fontFamily: 'Rajdhani, sans-serif',
-      fontSize: '11px',
-      fontWeight: '700',
-      color: '#94a3b8'
+    const sectionTitle = scene.add.text(scoreX + 16, scoreY + 48, 'SECTOR ZONE', {
+      fontFamily: 'Orbitron, sans-serif',
+      fontSize: '10px',
+      fontStyle: 'bold',
+      color: '#94a3b8',
+      letterSpacing: 1
     });
 
-    this.sectionText = scene.add.text(scoreX + 200, scoreY + 40, 'SEC A: AWAKENING', {
+    this.sectionText = scene.add.text(scoreX + scoreW - 16, scoreY + 46, 'SEC A: AWAKENING', {
       fontFamily: 'Rajdhani, sans-serif',
       fontSize: '13px',
       fontWeight: '700',
       color: '#38bdf8'
     }).setOrigin(1, 0);
 
-    // 4. Bottom Right: Ability Action Indicators
+    // 5. Bottom Right: Multi-State Ability Badges
     const abX = width - 200;
     const abY = height - 56;
 
-    // Freeze badge [Q]
-    this.freezeBadge = this.createAbilityBadge(abX - 130, abY, 'Q', 'FREEZE', '35');
+    // Freeze badge [Q] (35 NRG)
+    this.freezeBadge = this.createAbilityBadge(abX - 140, abY, 'Q', 'FREEZE', 35);
 
-    // Dash badge [E]
-    this.dashBadge = this.createAbilityBadge(abX, abY, 'E', 'DASH', '25');
+    // Dash badge [E] (25 NRG)
+    this.dashBadge = this.createAbilityBadge(abX, abY, 'E', 'DASH', 25);
 
-    // Notification banner text
+    // Alert notification text (middle screen)
     this.notifyText = scene.add.text(width / 2, height / 2 - 120, '', {
       fontFamily: 'Orbitron, sans-serif',
-      fontSize: '18px',
+      fontSize: '16px',
       fontStyle: 'bold',
-      color: '#ef4444'
+      color: '#ef4444',
+      letterSpacing: 2
     }).setOrigin(0.5).setAlpha(0);
 
+    // Add everything to HUD master viewport container
     this.container.add([
+      this.audioBadge,
+      this.pauseBadge,
+      this.restartBadge,
       vitalsBg,
       this.healthFill,
       hpLabel,
@@ -187,69 +251,165 @@ export class HUD {
 
     this.vitalsX = vitalsX;
     this.vitalsY = vitalsY;
+    this.vitalsW = vitalsW;
+  }
+
+  updateAudioBadgeGfx(isMuted) {
+    this.audioGfx.clear();
+    this.audioGfx.fillStyle(0x070c1b, 0.85);
+    this.audioGfx.fillRoundedRect(-55, -14, 110, 28, 4);
+    this.audioGfx.lineStyle(1.2, isMuted ? 0xef4444 : 0x00f0ff, 0.7);
+    this.audioGfx.strokeRoundedRect(-55, -14, 110, 28, 4);
+  }
+
+  updateAudioBadge(isMuted) {
+    if (!this.audioText) return;
+    this.updateAudioBadgeGfx(isMuted);
+    this.audioText.setText(isMuted ? '[M] MUTED' : '[M] AUDIO ON');
+    this.audioText.setColor(isMuted ? '#ef4444' : '#00f0ff');
   }
 
   createAbilityBadge(x, y, keyLabel, actionLabel, cost) {
-    const badgeWidth = 118;
-    const badgeHeight = 44;
+    const badgeWidth = 126;
+    const badgeHeight = 46;
 
     const container = this.scene.add.container(x, y);
 
     const bg = this.scene.add.graphics();
-    bg.fillStyle(0x070c1b, 0.9);
-    bg.fillRoundedRect(-badgeWidth / 2, -badgeHeight / 2, badgeWidth, badgeHeight, 4);
-    bg.lineStyle(1.5, 0x00f0ff, 0.7);
-    bg.strokeRoundedRect(-badgeWidth / 2, -badgeHeight / 2, badgeWidth, badgeHeight, 4);
+    bg.fillStyle(0x070c1b, 0.92);
+    bg.fillRoundedRect(-badgeWidth / 2, -badgeHeight / 2, badgeWidth, badgeHeight, 5);
+    bg.lineStyle(1.5, 0x00f0ff, 0.75);
+    bg.strokeRoundedRect(-badgeWidth / 2, -badgeHeight / 2, badgeWidth, badgeHeight, 5);
 
-    const keyBox = this.scene.add.text(-badgeWidth / 2 + 18, 0, `[${keyLabel}]`, {
+    const keyBox = this.scene.add.text(-badgeWidth / 2 + 20, 0, `[${keyLabel}]`, {
       fontFamily: 'Orbitron, sans-serif',
       fontSize: '12px',
       fontStyle: 'bold',
       color: '#00f0ff'
     }).setOrigin(0.5);
 
-    const title = this.scene.add.text(8, -6, actionLabel, {
-      fontFamily: 'Rajdhani, sans-serif',
-      fontSize: '13px',
-      fontWeight: '700',
-      color: '#e2e8f0',
+    const title = this.scene.add.text(12, -7, actionLabel, {
+      fontFamily: 'Orbitron, sans-serif',
+      fontSize: '12px',
+      fontStyle: 'bold',
+      color: '#f8fafc',
       letterSpacing: 1
     }).setOrigin(0.5);
 
-    const costTxt = this.scene.add.text(8, 10, `${cost} NRG`, {
+    const statusTag = this.scene.add.text(12, 10, `${cost} NRG`, {
       fontFamily: 'Rajdhani, monospace',
       fontSize: '11px',
+      fontWeight: '700',
       color: '#94a3b8'
     }).setOrigin(0.5);
 
-    container.add([bg, keyBox, title, costTxt]);
+    container.add([bg, keyBox, title, statusTag]);
 
-    return { container, bg, keyBox, title, costTxt, badgeWidth, badgeHeight };
+    return {
+      container,
+      bg,
+      keyBox,
+      title,
+      statusTag,
+      badgeWidth,
+      badgeHeight,
+      cost,
+      currentState: 'READY'
+    };
+  }
+
+  /**
+   * Updates ability badge appearance across 4 distinct authoritative states:
+   * 'READY', 'ACTIVE', 'COOLING', 'LOW_ENERGY'
+   */
+  updateBadgeState(badge, state) {
+    if (badge.currentState === state) return;
+    badge.currentState = state;
+
+    const w = badge.badgeWidth;
+    const h = badge.badgeHeight;
+    badge.bg.clear();
+
+    if (state === 'ACTIVE') {
+      // Temporal active state (Violet/Cyan glow)
+      badge.bg.fillStyle(0x1a0b2e, 0.95);
+      badge.bg.fillRoundedRect(-w / 2, -h / 2, w, h, 5);
+      badge.bg.lineStyle(2, 0xa855f7, 1.0);
+      badge.bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 5);
+
+      badge.keyBox.setColor('#c084fc');
+      badge.title.setColor('#ffffff');
+      badge.statusTag.setText('◆ ACTIVE ◆');
+      badge.statusTag.setColor('#c084fc');
+    } else if (state === 'COOLING') {
+      // Cooldown state (Amber)
+      badge.bg.fillStyle(0x140e06, 0.92);
+      badge.bg.fillRoundedRect(-w / 2, -h / 2, w, h, 5);
+      badge.bg.lineStyle(1.5, 0xf59e0b, 0.8);
+      badge.bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 5);
+
+      badge.keyBox.setColor('#f59e0b');
+      badge.title.setColor('#fde68a');
+      badge.statusTag.setText('COOLING');
+      badge.statusTag.setColor('#f59e0b');
+    } else if (state === 'LOW_ENERGY') {
+      // Insufficient energy (Muted Slate with red cost)
+      badge.bg.fillStyle(0x070c1b, 0.88);
+      badge.bg.fillRoundedRect(-w / 2, -h / 2, w, h, 5);
+      badge.bg.lineStyle(1.2, 0x334155, 0.5);
+      badge.bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 5);
+
+      badge.keyBox.setColor('#475569');
+      badge.title.setColor('#64748b');
+      badge.statusTag.setText(`${badge.cost} NRG`);
+      badge.statusTag.setColor('#ef4444');
+    } else {
+      // READY (Cyan Electric)
+      badge.bg.fillStyle(0x070c1b, 0.92);
+      badge.bg.fillRoundedRect(-w / 2, -h / 2, w, h, 5);
+      badge.bg.lineStyle(1.5, 0x00f0ff, 0.8);
+      badge.bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 5);
+
+      badge.keyBox.setColor('#00f0ff');
+      badge.title.setColor('#f8fafc');
+      badge.statusTag.setText(`${badge.cost} NRG`);
+      badge.statusTag.setColor('#94a3b8');
+    }
   }
 
   update(player, countdownSeconds, score = 0, currentSection = 'SEC A: AWAKENING') {
     if (!player) return;
 
-    const barW = 120;
-    const barH = 8;
+    const barW = 252;
+    const barH = 6;
+    const barX = this.vitalsX + 14;
 
-    // 1. Health Bar Fill
+    // 1. Health Bar with 3-tier color states (Normal green, Warning amber, Critical red)
     const hpRatio = Phaser.Math.Clamp(player.health / GAME_SETTINGS.PLAYER.MAX_HEALTH, 0, 1);
     this.healthFill.clear();
-    this.healthFill.fillStyle(0x1e293b, 1);
-    this.healthFill.fillRect(this.vitalsX + 80, this.vitalsY + 16, barW, barH);
-    this.healthFill.fillStyle(hpRatio > 0.3 ? 0x10b981 : 0xef4444, 1);
-    this.healthFill.fillRect(this.vitalsX + 80, this.vitalsY + 16, barW * hpRatio, barH);
-    this.hpText.setText(`${Math.round(player.health)}`);
+    // Background slot
+    this.healthFill.fillStyle(0x141e33, 1);
+    this.healthFill.fillRect(barX, this.vitalsY + 28, barW, barH);
 
-    // 2. Energy Bar Fill
+    let hpColor = 0x10b981; // Green
+    if (hpRatio <= 0.25) {
+      hpColor = 0xef4444; // Red critical
+    } else if (hpRatio <= 0.5) {
+      hpColor = 0xf59e0b; // Amber warning
+    }
+
+    this.healthFill.fillStyle(hpColor, 1);
+    this.healthFill.fillRect(barX, this.vitalsY + 28, barW * hpRatio, barH);
+    this.hpText.setText(`${Math.max(0, Math.round(player.health))} / 100`);
+
+    // 2. Energy Bar (Electric Cyan)
     const epRatio = Phaser.Math.Clamp(player.energy / GAME_SETTINGS.CHRONO.MAX_ENERGY, 0, 1);
     this.energyFill.clear();
-    this.energyFill.fillStyle(0x1e293b, 1);
-    this.energyFill.fillRect(this.vitalsX + 80, this.vitalsY + 44, barW, barH);
+    this.energyFill.fillStyle(0x141e33, 1);
+    this.energyFill.fillRect(barX, this.vitalsY + 60, barW, barH);
     this.energyFill.fillStyle(0x00f0ff, 1);
-    this.energyFill.fillRect(this.vitalsX + 80, this.vitalsY + 44, barW * epRatio, barH);
-    this.epText.setText(`${Math.round(player.energy)}`);
+    this.energyFill.fillRect(barX, this.vitalsY + 60, barW * epRatio, barH);
+    this.epText.setText(`${Math.round(player.energy)} / 100`);
 
     // 3. Mission Countdown Clock
     const totalSec = Math.max(0, Math.floor(countdownSeconds));
@@ -263,38 +423,54 @@ export class HUD {
       this.timerText.setColor('#00f0ff');
     }
 
-    // 4. Score & Section
+    // 4. Score & Progression Sector
     this.scoreText.setText(String(score).padStart(4, '0'));
     this.sectionText.setText(currentSection);
 
-    // 5. Ability badges availability state
-    this.updateBadgeState(this.freezeBadge, player.energy >= GAME_SETTINGS.CHRONO.FREEZE_COST);
-    this.updateBadgeState(this.dashBadge, player.energy >= GAME_SETTINGS.CHRONO.DASH_COST);
-  }
-
-  updateBadgeState(badge, isAvailable) {
-    badge.bg.clear();
-    if (isAvailable) {
-      badge.bg.fillStyle(0x070c1b, 0.9);
-      badge.bg.fillRoundedRect(-badge.badgeWidth / 2, -badge.badgeHeight / 2, badge.badgeWidth, badge.badgeHeight, 4);
-      badge.bg.lineStyle(1.5, 0x00f0ff, 0.7);
-      badge.bg.strokeRoundedRect(-badge.badgeWidth / 2, -badge.badgeHeight / 2, badge.badgeWidth, badge.badgeHeight, 4);
-      badge.title.setColor('#e2e8f0');
-      badge.keyBox.setColor('#00f0ff');
+    // 5. Authoritative Multi-State Ability Status
+    // Freeze Ability State
+    if (player.isFreezeActive) {
+      this.updateBadgeState(this.freezeBadge, 'ACTIVE');
+    } else if (player.energy < GAME_SETTINGS.CHRONO.FREEZE_COST) {
+      this.updateBadgeState(this.freezeBadge, 'LOW_ENERGY');
     } else {
-      badge.bg.fillStyle(0x070c1b, 0.9);
-      badge.bg.fillRoundedRect(-badge.badgeWidth / 2, -badge.badgeHeight / 2, badge.badgeWidth, badge.badgeHeight, 4);
-      badge.bg.lineStyle(1.5, 0x475569, 0.4);
-      badge.bg.strokeRoundedRect(-badge.badgeWidth / 2, -badge.badgeHeight / 2, badge.badgeWidth, badge.badgeHeight, 4);
-      badge.title.setColor('#64748b');
-      badge.keyBox.setColor('#64748b');
+      this.updateBadgeState(this.freezeBadge, 'READY');
+    }
+
+    // Dash Ability State
+    if (player.isDashing) {
+      this.updateBadgeState(this.dashBadge, 'ACTIVE');
+    } else if (player.dashCooldown && player.dashCooldown > 0) {
+      this.updateBadgeState(this.dashBadge, 'COOLING');
+    } else if (player.energy < GAME_SETTINGS.CHRONO.DASH_COST) {
+      this.updateBadgeState(this.dashBadge, 'LOW_ENERGY');
+    } else {
+      this.updateBadgeState(this.dashBadge, 'READY');
     }
   }
 
-  updateAudioBadge(isMuted) {
-    if (!this.audioText) return;
-    this.audioText.setText(isMuted ? '[M] MUTED' : '[M] AUDIO ON');
-    this.audioText.setColor(isMuted ? '#ef4444' : '#00f0ff');
+  /**
+   * Displays floating holographic checkpoint confirmation banner
+   */
+  showCheckpointBanner(sectionId, sectionTitle = '') {
+    UIComponents.createNotificationBanner(
+      this.scene,
+      '◆ TEMPORAL ANCHOR ESTABLISHED ◆',
+      `CHECKPOINT CP-${sectionId} // ${sectionTitle}`,
+      { accentColor: 0x00f0ff, titleColor: '#00f0ff' }
+    );
+  }
+
+  /**
+   * Displays floating holographic section transition banner
+   */
+  showSectionBanner(sectionTitle) {
+    UIComponents.createNotificationBanner(
+      this.scene,
+      '◆ SECTOR TRANSITION DETECTED ◆',
+      `ENTERING ${sectionTitle}`,
+      { accentColor: 0xa855f7, titleColor: '#c084fc' }
+    );
   }
 
   triggerAbilityPulse(abilityId, success) {
@@ -304,7 +480,7 @@ export class HUD {
     if (success) {
       this.scene.tweens.add({
         targets: badge.container,
-        scale: 1.15,
+        scale: 1.12,
         duration: 120,
         yoyo: true,
         ease: 'Cubic.easeOut'
@@ -314,7 +490,7 @@ export class HUD {
       this.scene.tweens.add({
         targets: badge.container,
         x: badge.container.x - 6,
-        duration: 60,
+        duration: 50,
         yoyo: true,
         repeat: 3,
         ease: 'Linear'
@@ -332,7 +508,7 @@ export class HUD {
   }
 
   /**
-   * Displays victory level completion overlay
+   * Displays victory level completion overlay with authoritative stats
    */
   showVictoryOverlay(stats = {}) {
     audioManager.play('victory');
@@ -340,19 +516,27 @@ export class HUD {
     const overlay = this.scene.add.container(width / 2, height / 2).setDepth(60);
     overlay.setScrollFactor(0);
 
-    // Dim background
+    // Dark backdrop overlay
     const bgDim = this.scene.add.graphics();
     bgDim.fillStyle(0x040714, 0.92);
     bgDim.fillRect(-width / 2, -height / 2, width, height);
 
-    // Victory modal card
-    const cardW = 600;
-    const cardH = 420;
+    // Victory modal card using UIComponents design tokens
+    const cardW = 620;
+    const cardH = 430;
     const card = this.scene.add.graphics();
     card.fillStyle(0x0a1128, 0.96);
     card.fillRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 8);
     card.lineStyle(2, 0x00f0ff, 0.9);
     card.strokeRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 8);
+
+    // Top notches
+    card.lineStyle(2, 0x00f0ff, 1);
+    const nLen = 14;
+    card.lineBetween(-cardW / 2, -cardH / 2 + nLen, -cardW / 2, -cardH / 2);
+    card.lineBetween(-cardW / 2, -cardH / 2, -cardW / 2 + nLen, -cardH / 2);
+    card.lineBetween(cardW / 2 - nLen, -cardH / 2, cardW / 2, -cardH / 2);
+    card.lineBetween(cardW / 2, -cardH / 2, cardW / 2, -cardH / 2 + nLen);
 
     // Header
     const title = this.scene.add.text(0, -cardH / 2 + 45, 'TEMPORAL MATRIX STABILIZED', {
@@ -363,7 +547,7 @@ export class HUD {
       letterSpacing: 3
     }).setOrigin(0.5);
 
-    const subtitle = this.scene.add.text(0, -cardH / 2 + 75, 'AETHELON CITY CHRONO CORE SECURED • TIMELINE RESTORED', {
+    const subtitle = this.scene.add.text(0, -cardH / 2 + 75, 'AETHELON CHRONO CORE SECURED • TIMELINE RESTORED', {
       fontFamily: 'Rajdhani, sans-serif',
       fontSize: '13px',
       fontWeight: '700',
@@ -371,81 +555,75 @@ export class HUD {
       letterSpacing: 2
     }).setOrigin(0.5);
 
-    // Stats Grid
+    // Stats Grid Container
     const statBox = this.scene.add.graphics();
-    statBox.fillStyle(0x060b1c, 0.8);
-    statBox.fillRoundedRect(-cardW / 2 + 30, -70, cardW - 60, 170, 6);
+    statBox.fillStyle(0x060b1c, 0.85);
+    statBox.fillRoundedRect(-cardW / 2 + 30, -70, cardW - 60, 175, 6);
     statBox.lineStyle(1, 0x1e293b, 0.8);
-    statBox.strokeRoundedRect(-cardW / 2 + 30, -70, cardW - 60, 170, 6);
+    statBox.strokeRoundedRect(-cardW / 2 + 30, -70, cardW - 60, 175, 6);
+
+    // Add background, card, title, and statBox to overlay first
+    overlay.add([bgDim, card, title, subtitle, statBox]);
 
     const statRows = [
       { label: 'OPERATIVE SCORE:', val: `${stats.score || 0} PTS` },
       { label: 'TIME REMAINING:', val: `${stats.timeStr || '02:00'}` },
       { label: 'CHECKPOINTS ANCHORED:', val: `${stats.checkpoints || 4} / 4` },
-      { label: 'STABILITY RATING:', val: '100% [OPTIMAL]' }
+      { label: 'TIMELINE STABILITY:', val: '100% [OPTIMAL]' }
     ];
 
     statRows.forEach((r, idx) => {
-      const yPos = -50 + idx * 36;
-      overlay.add(this.scene.add.text(-cardW / 2 + 54, yPos, r.label, {
+      const yPos = -50 + idx * 38;
+      const lbl = this.scene.add.text(-cardW / 2 + 54, yPos, r.label, {
         fontFamily: 'Rajdhani, sans-serif',
         fontSize: '15px',
         fontWeight: '700',
-        color: '#94a3b8'
-      }));
-      overlay.add(this.scene.add.text(cardW / 2 - 54, yPos, r.val, {
+        color: '#94a3b8',
+        letterSpacing: 1
+      });
+      const val = this.scene.add.text(cardW / 2 - 54, yPos, r.val, {
         fontFamily: 'Orbitron, monospace',
         fontSize: '15px',
         fontStyle: 'bold',
-        color: idx === 3 ? '#10b981' : '#e2e8f0'
-      }).setOrigin(1, 0));
+        color: idx === 3 ? '#10b981' : '#f8fafc'
+      }).setOrigin(1, 0);
+
+      overlay.add([lbl, val]);
     });
 
-    // Interactive Buttons
-    const btnW = 200;
-    const btnH = 44;
+    // Replay Button (Primary)
+    const btnReplay = UIComponents.createButton(this.scene, -135, 150, 230, 44, 'REPLAY MISSION [ENTER]', {
+      isPrimary: true,
+      onClick: () => {
+        audioManager.play('uiClick');
+        this.scene.scene.restart();
+      }
+    });
 
-    // Button 1: Replay Mission
-    const btnReplay = this.scene.add.container(-120, 150);
-    const bg1 = this.scene.add.graphics();
-    bg1.fillStyle(0x00f0ff, 1);
-    bg1.fillRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, 4);
-    const txt1 = this.scene.add.text(0, 0, 'REPLAY MISSION', {
-      fontFamily: 'Orbitron, sans-serif',
-      fontSize: '13px',
-      fontStyle: 'bold',
-      color: '#070b16'
-    }).setOrigin(0.5);
-    btnReplay.add([bg1, txt1]);
-    btnReplay.setSize(btnW, btnH);
-    btnReplay.setInteractive({ useHandCursor: true });
-    btnReplay.on('pointerdown', () => {
+    // Main Menu Button
+    const btnMenu = UIComponents.createButton(this.scene, 135, 150, 230, 44, 'MAIN MENU [ESC]', {
+      isPrimary: false,
+      onClick: () => {
+        audioManager.play('uiClick');
+        this.scene.scene.start('MenuScene');
+      }
+    });
+
+    overlay.add([btnReplay, btnMenu]);
+
+    // Keyboard navigation for victory overlay
+    const onEnter = () => {
       audioManager.play('uiClick');
+      this.scene.input.keyboard.off('keydown-ENTER', onEnter);
       this.scene.scene.restart();
-    });
-
-    // Button 2: Main Menu
-    const btnMenu = this.scene.add.container(120, 150);
-    const bg2 = this.scene.add.graphics();
-    bg2.fillStyle(0x1e293b, 1);
-    bg2.fillRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, 4);
-    bg2.lineStyle(1.5, 0x00f0ff, 0.6);
-    bg2.strokeRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, 4);
-    const txt2 = this.scene.add.text(0, 0, 'MAIN MENU', {
-      fontFamily: 'Orbitron, sans-serif',
-      fontSize: '13px',
-      fontStyle: 'bold',
-      color: '#e2e8f0'
-    }).setOrigin(0.5);
-    btnMenu.add([bg2, txt2]);
-    btnMenu.setSize(btnW, btnH);
-    btnMenu.setInteractive({ useHandCursor: true });
-    btnMenu.on('pointerdown', () => {
+    };
+    const onEsc = () => {
       audioManager.play('uiClick');
+      this.scene.input.keyboard.off('keydown-ESC', onEsc);
       this.scene.scene.start('MenuScene');
-    });
-
-    overlay.add([bgDim, card, title, subtitle, statBox, btnReplay, btnMenu]);
+    };
+    this.scene.input.keyboard.once('keydown-ENTER', onEnter);
+    this.scene.input.keyboard.once('keydown-ESC', onEsc);
 
     // Fade-in animation
     overlay.setAlpha(0);

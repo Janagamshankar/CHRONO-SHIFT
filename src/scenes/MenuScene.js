@@ -123,6 +123,9 @@ export default class MenuScene extends Phaser.Scene {
       letterSpacing: 2
     }).setOrigin(0.5).setDepth(10);
 
+    // Top-right persistent audio badge
+    this.audioBadge = this.createAudioBadge(width - 80, 36);
+
     // Setup Keyboard Navigation
     this.setupKeyboardInput();
 
@@ -254,7 +257,8 @@ export default class MenuScene extends Phaser.Scene {
     });
 
     this.input.keyboard.on('keydown-M', () => {
-      audioManager.toggleMute();
+      const isMuted = audioManager.toggleMute();
+      this.updateAudioBadge(isMuted);
       audioManager.play('uiClick');
     });
 
@@ -368,36 +372,79 @@ export default class MenuScene extends Phaser.Scene {
     }
   }
 
+  createAudioBadge(x, y) {
+    const container = this.add.container(x, y).setDepth(15);
+    const bg = this.add.graphics();
+    const updateGfx = (isMuted) => {
+      bg.clear();
+      bg.fillStyle(0x070c1b, 0.85);
+      bg.fillRoundedRect(-55, -14, 110, 28, 4);
+      bg.lineStyle(1.2, isMuted ? 0xef4444 : 0x00f0ff, 0.7);
+      bg.strokeRoundedRect(-55, -14, 110, 28, 4);
+    };
+    updateGfx(audioManager.isMuted);
+
+    const text = this.add.text(0, 0, audioManager.isMuted ? '[M] MUTED' : '[M] AUDIO ON', {
+      fontFamily: 'Orbitron, sans-serif',
+      fontSize: '11px',
+      fontStyle: 'bold',
+      color: audioManager.isMuted ? '#ef4444' : '#00f0ff',
+      letterSpacing: 1
+    }).setOrigin(0.5);
+
+    container.add([bg, text]);
+    container.setSize(110, 28);
+    container.setInteractive({ useHandCursor: true });
+    container.on('pointerdown', () => {
+      const isMuted = audioManager.toggleMute();
+      this.updateAudioBadge(isMuted);
+      audioManager.play('uiClick');
+    });
+
+    this.audioBadgeGfx = bg;
+    this.audioBadgeText = text;
+    this.updateAudioBadgeGfx = updateGfx;
+    return container;
+  }
+
+  updateAudioBadge(isMuted) {
+    if (!this.audioBadgeText) return;
+    this.updateAudioBadgeGfx(isMuted);
+    this.audioBadgeText.setText(isMuted ? '[M] MUTED' : '[M] AUDIO ON');
+    this.audioBadgeText.setColor(isMuted ? '#ef4444' : '#00f0ff');
+  }
+
   openHowToPlayModal() {
-    const { container, boxX, boxY, modalWidth, modalHeight } = this.createModalBase('HOW TO PLAY // OPERATIVE CONTROLS');
+    const { container, boxX, boxY, modalWidth, modalHeight } = this.createModalBase('HOW TO PLAY // OPERATIVE CONTROLS', 880, 500);
 
     const sections = [
       {
-        title: 'MOVEMENT CONTROLS',
+        title: 'TACTICAL MOVEMENT',
         color: '#38bdf8',
-        y: boxY - modalHeight / 2 + 85,
+        y: boxY - modalHeight / 2 + 82,
         items: [
-          '• [ A / D ] or [ Arrow Left / Right ]: Run & lateral repositioning',
-          '• [ Spacebar ] or [ Arrow Up ]: Jump across hazardous gaps',
-          '• [ S ] or [ Arrow Down ]: Low-profile slide beneath overhead barriers'
+          '• [ A / D ] or [ ← / → ] : Run laterally across platforms',
+          '• [ SPACE ] or [ W ] or [ ↑ ] : Jump across hazardous gaps & obstacles',
+          '• [ S ] or [ ↓ ] : Low-profile slide beneath overhead lasers & blades'
         ]
       },
       {
-        title: 'CHRONO GAUNTLET POWERS',
+        title: 'CHRONO GAUNTLET SIGNATURE ABILITIES',
         color: '#c084fc',
-        y: boxY - modalHeight / 2 + 185,
+        y: boxY - modalHeight / 2 + 184,
         items: [
-          '• [ Q ] Chrono Freeze (Cost: 35 Energy) — Pauses rotating hazards, projectiles & platforms for 2.0s',
-          '• [ E / Shift ] Chrono Dash (Cost: 25 Energy) — High-velocity directional burst through danger'
+          '• [ Q ] Chrono Freeze (Cost: 35 NRG) — Pauses rotating blades, lasers & projectiles for 2.0s',
+          '• [ E / SHIFT ] Chrono Dash (Cost: 25 NRG) — High-velocity burst with invulnerability frames'
         ]
       },
       {
-        title: 'VITAL SYSTEMS & OBJECTIVE',
+        title: 'MISSION OPERATIONS & DIRECTIVES',
         color: '#f59e0b',
-        y: boxY - modalHeight / 2 + 285,
+        y: boxY - modalHeight / 2 + 286,
         items: [
-          '• HEALTH (100) & ENERGY (100) — Replenish energy by collecting Chrono Cells (+20)',
-          '• OBJECTIVE — Navigate through 4 fractured sectors to reach the Chrono Core before Zero Second!'
+          '• [ P / ESC ] Pause & Live Settings  •  [ R ] Quick Checkpoint Respawn  •  [ M ] Audio Mute',
+          '• Collect Chrono Cells (+20 NRG) to sustain Gauntlet energy across all 4 fractured sectors',
+          '• Reach the central Chrono Core reactor before the Zero Second countdown expires!'
         ]
       }
     ];
@@ -405,7 +452,7 @@ export default class MenuScene extends Phaser.Scene {
     sections.forEach(s => {
       const title = this.add.text(boxX - modalWidth / 2 + 40, s.y, s.title, {
         fontFamily: 'Orbitron, sans-serif',
-        fontSize: '15px',
+        fontSize: '14px',
         fontStyle: 'bold',
         color: s.color,
         letterSpacing: 2
@@ -413,10 +460,12 @@ export default class MenuScene extends Phaser.Scene {
       container.add(title);
 
       s.items.forEach((txt, idx) => {
-        const line = this.add.text(boxX - modalWidth / 2 + 45, s.y + 24 + idx * 20, txt, {
+        const line = this.add.text(boxX - modalWidth / 2 + 45, s.y + 24 + idx * 21, txt, {
           fontFamily: 'Rajdhani, sans-serif',
           fontSize: '16px',
-          color: '#e2e8f0'
+          fontWeight: '600',
+          color: '#e2e8f0',
+          letterSpacing: 0.5
         });
         container.add(line);
       });

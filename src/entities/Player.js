@@ -458,6 +458,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
    * Respawns the player cleanly at the specified checkpoint coordinates
    */
   respawnAt(x, y) {
+    this.clearActiveTimers();
     this.isDead = false;
     this.isDashing = false;
     this.isSliding = false;
@@ -470,9 +471,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.setVelocity(0, 0);
     this.body.setAllowGravity(true);
     this.body.enable = true;
+    this.body.setSize(24, 46);
+    this.body.setOffset(20, 12);
     this.setAlpha(1);
     this.setScale(1);
     this.clearTint();
+    this.play('player_idle', true);
     this.health = GAME_SETTINGS.PLAYER.MAX_HEALTH;
     this.energy = GAME_SETTINGS.CHRONO.MAX_ENERGY;
     this.isInvulnerable = true;

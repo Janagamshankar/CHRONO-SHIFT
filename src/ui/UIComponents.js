@@ -113,7 +113,12 @@ export class UIComponents {
 
     container.add([bgGfx, borderGfx, text]);
     container.setSize(width, height);
-    container.setInteractive({ useHandCursor: true });
+    container.setScrollFactor(options.scrollFactor !== undefined ? options.scrollFactor : 0);
+    container.setInteractive({
+      hitArea: new Phaser.Geom.Rectangle(-width / 2, -height / 2, width, height),
+      hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+      useHandCursor: true
+    });
 
     container.on('pointerover', () => {
       redraw('hover');
@@ -125,9 +130,9 @@ export class UIComponents {
       container.setScale(1.0);
     });
 
-    container.on('pointerdown', () => {
+    container.on('pointerdown', (pointer) => {
       redraw('pressed');
-      if (options.onClick) options.onClick();
+      if (options.onClick) options.onClick(pointer);
     });
 
     container.on('pointerup', () => {

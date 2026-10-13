@@ -447,7 +447,11 @@ export default class MenuScene extends Phaser.Scene {
 
     container.add([bgGfx, borderGfx, indicator, labelText]);
     container.setSize(btnWidth, btnHeight);
-    container.setInteractive({ useHandCursor: true });
+    container.setInteractive({
+      hitArea: new Phaser.Geom.Rectangle(-btnWidth / 2, -btnHeight / 2, btnWidth, btnHeight),
+      hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+      useHandCursor: true
+    });
 
     const redraw = (state) => {
       bgGfx.clear();

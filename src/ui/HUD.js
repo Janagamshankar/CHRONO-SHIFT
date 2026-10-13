@@ -509,7 +509,9 @@ export class HUD {
     const { width, height } = this.scene.scale;
 
     // Prevent duplicate game-over overlays from stacking
-    if (this.currentGameOverOverlay) {
+    if (this.currentGameOverCleanup) {
+      this.currentGameOverCleanup();
+    } else if (this.currentGameOverOverlay) {
       this.currentGameOverOverlay.destroy();
       this.currentGameOverOverlay = null;
     }
@@ -595,48 +597,77 @@ export class HUD {
       overlay.add([lbl, val]);
     });
 
+    let isActionHandled = false;
+
     const cleanup = () => {
-      window.removeEventListener('keydown', onKeyDown);
+      if (this.scene && this.scene.input && this.scene.input.keyboard) {
+        this.scene.input.keyboard.off('keydown', onPhaserKeyDown);
+      }
+      window.removeEventListener('keydown', onWindowKeyDown);
+      this.currentGameOverCleanup = null;
       if (this.currentGameOverOverlay === overlay) {
         this.currentGameOverOverlay = null;
       }
       overlay.destroy();
     };
+    this.currentGameOverCleanup = cleanup;
+
+    const handleRetry = () => {
+      if (isActionHandled) return;
+      isActionHandled = true;
+      audioManager.play('uiClick');
+      cleanup();
+      if (onRetry) onRetry();
+    };
+
+    const handleMenu = () => {
+      if (isActionHandled) return;
+      isActionHandled = true;
+      audioManager.play('uiClick');
+      cleanup();
+      if (onMenu) onMenu();
+    };
 
     // Action Buttons: RETRY and MAIN MENU
     const btnRetry = UIComponents.createButton(this.scene, -125, 145, 210, 44, 'RETRY [R / ENTER]', {
       isPrimary: true,
-      onClick: () => {
-        audioManager.play('uiClick');
-        cleanup();
-        if (onRetry) onRetry();
-      }
+      scrollFactor: 0,
+      onClick: () => handleRetry()
     });
+    btnRetry.setScrollFactor(0);
 
     const btnMenu = UIComponents.createButton(this.scene, 125, 145, 210, 44, 'MAIN MENU [ESC]', {
       isPrimary: false,
-      onClick: () => {
-        audioManager.play('uiClick');
-        cleanup();
-        if (onMenu) onMenu();
-      }
+      scrollFactor: 0,
+      onClick: () => handleMenu()
     });
+    btnMenu.setScrollFactor(0);
 
     overlay.add([btnRetry, btnMenu]);
 
-    // Keyboard handlers
-    const onKeyDown = (e) => {
+    // Keyboard handlers via Phaser input system
+    const onPhaserKeyDown = (e) => {
+      if (isActionHandled) return;
       if (e.code === 'KeyR' || e.code === 'Enter') {
-        cleanup();
-        audioManager.play('uiClick');
-        if (onRetry) onRetry();
+        handleRetry();
       } else if (e.code === 'Escape') {
-        cleanup();
-        audioManager.play('uiClick');
-        if (onMenu) onMenu();
+        handleMenu();
       }
     };
-    window.addEventListener('keydown', onKeyDown);
+    if (this.scene && this.scene.input && this.scene.input.keyboard) {
+      this.scene.input.keyboard.on('keydown', onPhaserKeyDown);
+    }
+
+    // Window keyboard fallback in case canvas lost focus
+    const onWindowKeyDown = (e) => {
+      if (isActionHandled) return;
+      if (e.code === 'KeyR' || e.code === 'Enter') {
+        handleRetry();
+      } else if (e.code === 'Escape') {
+        handleMenu();
+      }
+    };
+    window.addEventListener('keydown', onWindowKeyDown);
 
     overlay.setAlpha(0);
     this.scene.tweens.add({

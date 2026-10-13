@@ -688,7 +688,7 @@ export default class FoundationTestScene extends Phaser.Scene {
 
     // R: Quick Restart from Checkpoint
     this.input.keyboard.on('keydown-R', () => {
-      if (this.isLevelComplete) return;
+      if (this.isLevelComplete || this.isGameOver) return;
       if (this.isGamePaused) this.resumeGame();
       this.handlePlayerDeath();
     });
@@ -777,6 +777,11 @@ export default class FoundationTestScene extends Phaser.Scene {
         this.input.keyboard.off('keydown-THREE');
         this.input.keyboard.off('keydown-FOUR');
         this.input.keyboard.off('keydown-FIVE');
+        this.input.keyboard.off('keydown-F');
+      }
+      this.scale.off('resize', this.onWindowResize, this);
+      if (this.hud && this.hud.currentGameOverCleanup) {
+        this.hud.currentGameOverCleanup();
       }
       if (this.timerEvent) this.timerEvent.remove();
       this.checkpoints.forEach(cp => cp.destroy());
@@ -1156,6 +1161,11 @@ export default class FoundationTestScene extends Phaser.Scene {
   retryFromCheckpoint() {
     this.isGameOver = false;
     this.isGamePaused = false;
+
+    // Reset any stuck keyboard state from before death
+    if (this.input && this.input.keyboard) {
+      this.input.keyboard.resetKeys();
+    }
 
     // Respawn player cleanly at checkpoint coordinates with full health & energy
     this.player.respawnAt(this.latestCheckpoint.x, this.latestCheckpoint.y);

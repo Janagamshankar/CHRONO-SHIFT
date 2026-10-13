@@ -29,6 +29,9 @@ export class PlasmaProjectile extends Phaser.Physics.Arcade.Sprite {
 
     this.setVelocity(this.storedVx, this.storedVy);
 
+    this.startX = x;
+    this.startY = y;
+
     // Subtle plasma rotation
     this.setAngularVelocity(180);
 
@@ -57,9 +60,12 @@ export class PlasmaProjectile extends Phaser.Physics.Arcade.Sprite {
       });
     }
 
-    // Check bounds
-    const { width, height } = this.scene.scale;
-    if (this.x < -30 || this.x > width + 30 || this.y < -30 || this.y > height + 30) {
+    // Check bounds and maximum travel range (scaled for scrolling level)
+    const maxRange = 960;
+    const worldW = (this.scene && this.scene.physics && this.scene.physics.world.bounds.width) || 5120;
+    const worldH = (this.scene && this.scene.physics && this.scene.physics.world.bounds.height) || 800;
+    const traveled = Math.hypot(this.x - this.startX, this.y - this.startY);
+    if (traveled > maxRange || this.x < -40 || this.x > worldW + 40 || this.y < -40 || this.y > worldH + 40) {
       this.destroy();
     }
   }

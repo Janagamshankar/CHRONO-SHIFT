@@ -197,7 +197,9 @@ export default class FoundationTestScene extends Phaser.Scene {
     // Climax set-piece: Dual hazards, synchronized laser, collapsing platform 2, and Chrono Core!
     buildPlatformSegment(3900, 4200);
     buildVoidPit(4200, 4360);
-    buildPlatformSegment(4360, 4720);
+    buildPlatformSegment(4360, 4440);
+    buildVoidPit(4440, 4600); // Spanned by Collapsing Platform 2
+    buildPlatformSegment(4600, 4720);
     // Elevated Chrono Core reactor dais
     buildPlatformSegment(4720, 5080, groundY);
 
@@ -209,9 +211,11 @@ export default class FoundationTestScene extends Phaser.Scene {
     // Camera follow configuration
     this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
 
-    // Void Pit Collision
+    // Void Pit Collision (Lethal fall recovery to last valid checkpoint)
     this.physics.add.overlap(this.player, this.pitZones, () => {
-      this.player.takeDamage(35, 0, -320);
+      if (!this.player.isDead) {
+        this.player.die();
+      }
     });
 
     // 6. PHASE 5 CHECKPOINTS
@@ -310,8 +314,8 @@ export default class FoundationTestScene extends Phaser.Scene {
       damage: 20
     });
 
-    // Collapsing Platform 2 bridging final gap at x: 4480, y: groundY
-    this.colPlatform2 = new CollapsingPlatform(this, 4480, groundY, {
+    // Collapsing Platform 2 bridging final gap at x: 4520, y: groundY
+    this.colPlatform2 = new CollapsingPlatform(this, 4520, groundY, {
       warningDurationMs: 500,
       respawnDelayMs: 2400
     });
@@ -471,19 +475,24 @@ export default class FoundationTestScene extends Phaser.Scene {
       E: Phaser.Input.Keyboard.KeyCodes.E,
       SHIFT: Phaser.Input.Keyboard.KeyCodes.SHIFT,
       ESC: Phaser.Input.Keyboard.KeyCodes.ESC,
+      P: Phaser.Input.Keyboard.KeyCodes.P,
+      R: Phaser.Input.Keyboard.KeyCodes.R,
       TILDE: Phaser.Input.Keyboard.KeyCodes.TILDE
     });
 
+    this.isGamePaused = false;
+    this.pauseModal = null;
+
     // Q: Chrono Freeze activation
     this.input.keyboard.on('keydown-Q', () => {
-      if (this.isLevelComplete) return;
+      if (this.isLevelComplete || this.isGamePaused) return;
       const res = this.player.activateChronoFreeze(this.eligibleHazards);
       this.hud.triggerAbilityPulse('freeze', res.success);
     });
 
     // E or Shift: Chrono Dash activation
     const triggerDash = () => {
-      if (this.isLevelComplete) return;
+      if (this.isLevelComplete || this.isGamePaused) return;
       const res = this.player.activateChronoDash();
       this.hud.triggerAbilityPulse('dash', res.success);
     };
@@ -491,10 +500,24 @@ export default class FoundationTestScene extends Phaser.Scene {
     this.input.keyboard.on('keydown-E', triggerDash);
     this.input.keyboard.on('keydown-SHIFT', triggerDash);
 
-    // ESC: Return to Menu
-    this.input.keyboard.on('keydown-ESC', () => {
-      audioManager.applyTemporalFilter(false);
-      this.scene.start('MenuScene');
+    // P or ESC: In-game Pause Menu
+    const togglePause = () => {
+      if (this.isLevelComplete) return;
+      if (this.isGamePaused) {
+        this.resumeGame();
+      } else {
+        this.pauseGame();
+      }
+    };
+
+    this.input.keyboard.on('keydown-P', togglePause);
+    this.input.keyboard.on('keydown-ESC', togglePause);
+
+    // R: Quick Restart from Checkpoint
+    this.input.keyboard.on('keydown-R', () => {
+      if (this.isLevelComplete) return;
+      if (this.isGamePaused) this.resumeGame();
+      this.handlePlayerDeath();
     });
 
     // M: Toggle Audio Mute
@@ -558,11 +581,146 @@ export default class FoundationTestScene extends Phaser.Scene {
   }
 
   /**
+   * Toggles pause state and displays the in-game operations suspend menu
+   */
+  pauseGame() {
+    if (this.isGamePaused || this.isLevelComplete) return;
+    this.isGamePaused = true;
+    this.physics.world.pause();
+    if (this.timerEvent) this.timerEvent.paused = true;
+    audioManager.play('uiClick');
+
+    const { width, height } = this.scale;
+    const modal = this.add.container(width / 2, height / 2).setDepth(65);
+    modal.setScrollFactor(0);
+
+    // Dark backdrop overlay
+    const overlay = this.add.rectangle(0, 0, width, height, 0x030712, 0.85);
+    overlay.setInteractive();
+
+    // Modal frame
+    const boxW = 560;
+    const boxH = 410;
+    const box = this.add.graphics();
+    box.fillStyle(0x0a1128, 0.96);
+    box.fillRoundedRect(-boxW / 2, -boxH / 2, boxW, boxH, 8);
+    box.lineStyle(2, 0x00f0ff, 0.85);
+    box.strokeRoundedRect(-boxW / 2, -boxH / 2, boxW, boxH, 8);
+
+    // Title
+    const title = this.add.text(0, -boxH / 2 + 38, 'TIMELINE SUSPENDED // PAUSED', {
+      fontFamily: 'Orbitron, sans-serif',
+      fontSize: '22px',
+      fontStyle: 'bold',
+      color: '#00f0ff',
+      letterSpacing: 3
+    }).setOrigin(0.5);
+
+    const subtitle = this.add.text(0, -boxH / 2 + 68, 'CHRONO RUNTIME HALTED • CHOOSE DIRECTIVE', {
+      fontFamily: 'Rajdhani, sans-serif',
+      fontSize: '13px',
+      fontWeight: '700',
+      color: '#94a3b8',
+      letterSpacing: 2
+    }).setOrigin(0.5);
+
+    // Buttons Container
+    const btnW = 280;
+    const btnH = 40;
+    const startY = -60;
+    const spacing = 52;
+
+    const pauseActions = [
+      {
+        label: 'RESUME MISSION [ESC / P]',
+        color: 0x00f0ff,
+        textColor: '#050814',
+        action: () => this.resumeGame()
+      },
+      {
+        label: 'RESTART CHECKPOINT [R]',
+        color: 0x1e293b,
+        textColor: '#e2e8f0',
+        action: () => {
+          this.resumeGame();
+          this.handlePlayerDeath();
+        }
+      },
+      {
+        label: 'RESTART MISSION',
+        color: 0x1e293b,
+        textColor: '#e2e8f0',
+        action: () => {
+          audioManager.applyTemporalFilter(false);
+          this.scene.restart();
+        }
+      },
+      {
+        label: 'ABORT TO MAIN MENU',
+        color: 0x1e293b,
+        textColor: '#e2e8f0',
+        action: () => {
+          audioManager.applyTemporalFilter(false);
+          this.scene.start('MenuScene');
+        }
+      }
+    ];
+
+    modal.add([overlay, box, title, subtitle]);
+
+    pauseActions.forEach((act, idx) => {
+      const bY = startY + idx * spacing;
+      const btn = this.add.container(0, bY);
+      const bg = this.add.graphics();
+      bg.fillStyle(act.color, 1);
+      bg.fillRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, 4);
+      bg.lineStyle(1.5, 0x00f0ff, 0.7);
+      bg.strokeRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, 4);
+
+      const txt = this.add.text(0, 0, act.label, {
+        fontFamily: 'Orbitron, sans-serif',
+        fontSize: '12px',
+        fontStyle: 'bold',
+        color: act.textColor
+      }).setOrigin(0.5);
+
+      btn.add([bg, txt]);
+      btn.setSize(btnW, btnH);
+      btn.setInteractive({ useHandCursor: true });
+      btn.on('pointerover', () => {
+        btn.setScale(1.04);
+        audioManager.play('uiHover');
+      });
+      btn.on('pointerout', () => btn.setScale(1.0));
+      btn.on('pointerdown', () => {
+        audioManager.play('uiClick');
+        act.action();
+      });
+
+      modal.add(btn);
+    });
+
+    this.pauseModal = modal;
+  }
+
+  resumeGame() {
+    if (!this.isGamePaused) return;
+    this.isGamePaused = false;
+    this.physics.world.resume();
+    if (this.timerEvent) this.timerEvent.paused = false;
+    if (this.pauseModal) {
+      this.pauseModal.destroy();
+      this.pauseModal = null;
+    }
+    audioManager.play('uiClick');
+  }
+
+  /**
    * Authoritative player death & checkpoint respawn handler
    */
   handlePlayerDeath() {
+    if (this.isGamePaused) this.resumeGame();
     this.player.respawnAt(this.latestCheckpoint.x, this.latestCheckpoint.y);
-    this.cameras.main.pan(this.latestCheckpoint.x, this.latestCheckpoint.y, 400, 'Quad.easeOut');
   }
 
   /**
@@ -604,6 +762,13 @@ export default class FoundationTestScene extends Phaser.Scene {
   }
 
   update(time, delta) {
+    if (this.isGamePaused) return;
+
+    // Pit fall check (reboot matrix cleanly if falling below bottom platform line)
+    if (this.player && this.player.y > 670 && !this.player.isDead) {
+      this.player.die();
+    }
+
     const isReduced = settingsManager.get('reducedMotion');
     const { width } = this.scale;
     const camX = this.cameras.main.scrollX;

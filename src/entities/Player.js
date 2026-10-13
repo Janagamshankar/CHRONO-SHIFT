@@ -25,11 +25,16 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.isDashing = false;
     this.isSliding = false;
     this.isInvulnerable = false;
+    this.isKnockedBack = false;
+    this.dashCooldown = false;
+    this.isFreezeActive = false;
     this.wasGrounded = true;
+    this.coyoteTimer = 0;
     this.footstepTimer = 0;
     this.dashTimer = null;
     this.slideTimer = null;
     this.afterimageTimer = null;
+    this.freezeEndTimer = null;
 
     // Movement tuning
     this.runSpeed = GAME_SETTINGS.PLAYER.RUN_SPEED;
@@ -39,12 +44,19 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   updateMovement(cursors, keys) {
-    if (this.isDashing) {
-      // Physics handled in dash state
+    if (this.isDashing || this.isDead || this.health <= 0) {
+      // Physics handled in dash or death state
       return;
     }
 
     const isGrounded = this.body.blocked.down || this.body.touching.down;
+
+    // Coyote timer management (100ms ledge-grace window)
+    if (isGrounded) {
+      this.coyoteTimer = 100;
+    } else {
+      this.coyoteTimer = Math.max(0, this.coyoteTimer - 16);
+    }
 
     // Landing detection: transition from airborne to grounded
     if (!this.wasGrounded && isGrounded && !this.isSliding) {
@@ -75,6 +87,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     if (this.isSliding) {
       // Maintain slide velocity in facing direction
       this.setVelocityX(this.facing * this.slideVelocity);
+      this.wasGrounded = isGrounded;
+      return;
+    }
+
+    // If currently undergoing damage knockback impulse, allow physics knockback to play out
+    if (this.isKnockedBack) {
       this.wasGrounded = isGrounded;
       return;
     }
@@ -111,8 +129,13 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       if (isGrounded) this.setAngle(0);
     }
 
-    // 3. Jump
-    if ((Phaser.Input.Keyboard.JustDown(cursors.up) || Phaser.Input.Keyboard.JustDown(keys.SPACE)) && isGrounded) {
+    // 3. Jump (Supports Spacebar, Arrow Up, and W with coyote grace)
+    const wantsJump = Phaser.Input.Keyboard.JustDown(cursors.up) ||
+                      Phaser.Input.Keyboard.JustDown(keys.SPACE) ||
+                      (keys.W && Phaser.Input.Keyboard.JustDown(keys.W));
+
+    if (wantsJump && (isGrounded || this.coyoteTimer > 0)) {
+      this.coyoteTimer = 0; // Consume coyote grace
       this.setVelocityY(this.jumpVelocity);
       this.setTexture('player_avatar_jump');
       audioManager.play('jump');
@@ -169,8 +192,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
    * Returns: { success: boolean, reason?: string }
    */
   activateChronoDash() {
-    if (this.isDashing) {
-      return { success: false, reason: 'ALREADY_DASHING' };
+    if (this.isDashing || this.dashCooldown || this.isDead || this.health <= 0) {
+      return { success: false, reason: 'UNAVAILABLE' };
     }
 
     const cost = GAME_SETTINGS.CHRONO.DASH_COST;
@@ -222,6 +245,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     // Restore normal run speed
     this.setVelocityX(this.facing * this.runSpeed);
 
+    // Brief post-dash recovery buffer (160ms) to prevent unintended key-bounce dashes
+    this.dashCooldown = true;
+    this.scene.time.delayedCall(160, () => {
+      this.dashCooldown = false;
+    });
+
     // Audio cue for dash arrival/dissipation
     audioManager.play('dashEnd');
 
@@ -241,6 +270,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
    * Returns: { success: boolean, reason?: string }
    */
   activateChronoFreeze(eligibleTargets = []) {
+    if (this.isFreezeActive || this.isDead || this.health <= 0) {
+      return { success: false, reason: 'ALREADY_FROZEN' };
+    }
+
     const cost = GAME_SETTINGS.CHRONO.FREEZE_COST;
     if (this.energy < cost) {
       audioManager.play('abilityReject');
@@ -249,6 +282,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     // Deduct energy exactly once
     this.energy = Math.max(0, this.energy - cost);
+    this.isFreezeActive = true;
 
     // Play freeze activation sound & engage dynamic low-pass temporal muffling
     audioManager.play('freeze');
@@ -267,6 +301,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     // Schedule audio release sound & restore normal audio spectrum
     if (this.freezeEndTimer) this.freezeEndTimer.remove();
     this.freezeEndTimer = this.scene.time.delayedCall(duration, () => {
+      this.isFreezeActive = false;
       audioManager.play('freezeRelease');
     });
 
@@ -302,6 +337,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     // Deduct health
     this.health = Math.max(0, this.health - amount);
     this.isInvulnerable = true;
+    this.isKnockedBack = true;
+
+    // Release knockback lock after 140ms
+    this.scene.time.delayedCall(140, () => {
+      this.isKnockedBack = false;
+    });
 
     // Visual & audio feedback
     audioManager.play('damage');
@@ -353,6 +394,19 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.setVelocity(0, 0);
     this.body.setAllowGravity(false);
     this.body.enable = false;
+
+    // Reset ability and movement states
+    this.isDashing = false;
+    this.isSliding = false;
+    this.isFreezeActive = false;
+    this.dashCooldown = false;
+    this.isKnockedBack = false;
+    if (this.dashTimer) { this.dashTimer.remove(); this.dashTimer = null; }
+    if (this.slideTimer) { this.slideTimer.remove(); this.slideTimer = null; }
+    if (this.afterimageTimer) { this.afterimageTimer.remove(); this.afterimageTimer = null; }
+    if (this.freezeEndTimer) { this.freezeEndTimer.remove(); this.freezeEndTimer = null; }
+    if (this.invulnTimer) { this.invulnTimer.remove(); this.invulnTimer = null; }
+    if (this.flashTween) { this.flashTween.stop(); this.flashTween = null; }
 
     // Trigger audio feedback and restore temporal audio filter cleanly
     audioManager.play('death');
@@ -427,6 +481,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
    */
   respawnAt(x, y) {
     this.isDead = false;
+    this.isDashing = false;
+    this.isSliding = false;
+    this.isKnockedBack = false;
+    this.dashCooldown = false;
+    this.isFreezeActive = false;
+    this.coyoteTimer = 0;
     this.x = x;
     this.y = y;
     this.setVelocity(0, 0);

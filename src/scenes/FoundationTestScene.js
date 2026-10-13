@@ -626,6 +626,9 @@ export default class FoundationTestScene extends Phaser.Scene {
       callback: () => {
         if (!this.isLevelComplete && !this.isGameOver && !this.isGamePaused && this.countdownSeconds > 0) {
           this.countdownSeconds--;
+          if (this.countdownSeconds <= 0) {
+            this.triggerGameOver('timeout');
+          }
         }
       }
     });
@@ -1078,6 +1081,11 @@ export default class FoundationTestScene extends Phaser.Scene {
     if (this.isGameOver || this.isLevelComplete) return;
     this.isGameOver = true;
 
+    // Safely stop the mission countdown timer
+    if (this.timerEvent) {
+      this.timerEvent.paused = true;
+    }
+
     // Immediately stop camera following into the abyss
     this.cameras.main.stopFollow();
 
@@ -1113,9 +1121,11 @@ export default class FoundationTestScene extends Phaser.Scene {
 
     const message = reason === 'abyss'
       ? 'Kael has fallen into the temporal abyss.'
-      : reason === 'hazard'
-        ? 'Kael suffered critical chronal disruption.'
-        : 'Timeline collapsed before reaching the core.';
+      : reason === 'timeout'
+        ? 'Timeline collapsed before reaching the core.'
+        : reason === 'hazard'
+          ? 'Kael suffered critical chronal disruption.'
+          : 'Timeline collapsed before reaching the core.';
 
     // Show Game Over UI immediately
     this.hud.showGameOverOverlay(
@@ -1153,13 +1163,42 @@ export default class FoundationTestScene extends Phaser.Scene {
     // Re-engage camera follow
     this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
 
-    // Unfreeze hazards
+    // If game over was due to countdown expiry, reset countdown timer to full
+    if (this.countdownSeconds <= 0) {
+      this.countdownSeconds = GAME_SETTINGS.COUNTDOWN_SECONDS;
+    }
+    // Resume mission timer
+    if (this.timerEvent) {
+      this.timerEvent.paused = false;
+    }
+
+    // Safely thaw all hazards and clean up frozen states
     if (this.eligibleHazards) {
       this.eligibleHazards.forEach(h => {
-        if (h && h.unfreeze) h.unfreeze();
-        else if (h && h.isFrozen) h.isFrozen = false;
+        if (!h) return;
+        if (typeof h.thaw === 'function') {
+          h.thaw();
+        } else if (typeof h.unfreeze === 'function') {
+          h.unfreeze();
+        } else {
+          if (h.isFrozen !== undefined) h.isFrozen = false;
+          if (typeof h.clearTint === 'function') h.clearTint();
+        }
+
+        // Restore collapsed platforms if fallen
+        if (typeof h.reset === 'function' && h.state && h.state !== 'NORMAL') {
+          h.reset();
+        }
       });
     }
+
+    // Clean up active turret projectiles
+    if (this.plasmaTurret1 && this.plasmaTurret1.projectiles) {
+      this.plasmaTurret1.projectiles.clear(true, true);
+    }
+
+    // Clear temporal audio filter if active
+    audioManager.applyTemporalFilter(false);
 
     // Reset boss arena if active
     if (this.chronoCore) {

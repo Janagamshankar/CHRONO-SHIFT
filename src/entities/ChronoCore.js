@@ -143,9 +143,12 @@ export class ChronoCore {
       this.isPlatformFrozen = true;
       this.sinePlatform.setTint(0x00f0ff);
       scene.time.delayedCall(dur, () => {
-        this.isPlatformFrozen = false;
-        this.sinePlatform.clearTint();
+        this.sinePlatform.thaw();
       });
+    };
+    this.sinePlatform.thaw = () => {
+      this.isPlatformFrozen = false;
+      this.sinePlatform.clearTint();
     };
     this.isPlatformFrozen = false;
 
@@ -262,10 +265,13 @@ export class ChronoCore {
         laserObj.topCap.setTint(0x00f0ff);
         laserObj.botCap.setTint(0x00f0ff);
         this.scene.time.delayedCall(dur, () => {
-          laserObj.isFrozen = false;
-          laserObj.topCap.clearTint();
-          laserObj.botCap.clearTint();
+          laserObj.thaw();
         });
+      };
+      laserObj.thaw = () => {
+        laserObj.isFrozen = false;
+        laserObj.topCap.clearTint();
+        laserObj.botCap.clearTint();
       };
 
       lasers.push(laserObj);

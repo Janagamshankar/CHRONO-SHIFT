@@ -474,6 +474,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.setScale(1);
     this.clearTint();
     this.health = GAME_SETTINGS.PLAYER.MAX_HEALTH;
+    this.energy = GAME_SETTINGS.CHRONO.MAX_ENERGY;
     this.isInvulnerable = true;
 
     // Audio cue for respawn

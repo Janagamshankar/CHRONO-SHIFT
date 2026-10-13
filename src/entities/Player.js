@@ -407,16 +407,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     return true;
   }
 
-  /**
-   * Handles player death sequence cleanly
-   */
-  die() {
-    this.isDead = true;
-    this.setVelocity(0, 0);
-    this.body.setAllowGravity(false);
-    this.body.enable = false;
-
-    // Reset ability and movement states
+  clearActiveTimers() {
     this.isDashing = false;
     this.isSliding = false;
     this.isFreezeActive = false;
@@ -428,67 +419,33 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     if (this.freezeEndTimer) { this.freezeEndTimer.remove(); this.freezeEndTimer = null; }
     if (this.invulnTimer) { this.invulnTimer.remove(); this.invulnTimer = null; }
     if (this.flashTween) { this.flashTween.stop(); this.flashTween = null; }
+  }
 
-    // Trigger audio feedback and restore temporal audio filter cleanly
+  /**
+   * Handles player death sequence cleanly
+   */
+  die(reason = 'abyss') {
+    if (this.isDead) return;
+    this.isDead = true;
+    this.setVelocity(0, 0);
+    if (this.body) {
+      this.body.setAllowGravity(false);
+      this.body.enable = false;
+      this.body.stop();
+    }
+
+    this.clearActiveTimers();
     audioManager.play('death');
     audioManager.applyTemporalFilter(false);
 
-    // Death shatter particles
-    for (let i = 0; i < 12; i++) {
-      const p = this.scene.add.image(this.x, this.y, 'particle_purple').setDepth(25);
-      p.setTint(0xef4444);
-      p.setScale(Phaser.Math.FloatBetween(0.8, 1.4));
-      const angle = (i / 12) * Math.PI * 2;
-      const dist = Phaser.Math.Between(40, 110);
-
-      this.scene.tweens.add({
-        targets: p,
-        x: this.x + Math.cos(angle) * dist,
-        y: this.y + Math.sin(angle) * dist,
-        alpha: 0,
-        scale: 0.1,
-        duration: 500,
-        ease: 'Cubic.easeOut',
-        onComplete: () => p.destroy()
-      });
+    // If scene provides authoritative triggerGameOver, invoke immediately
+    if (this.scene && typeof this.scene.triggerGameOver === 'function') {
+      this.scene.triggerGameOver(reason);
+      return;
     }
 
-    // Fade out avatar
-    this.scene.tweens.add({
-      targets: this,
-      alpha: 0,
-      scaleX: 0.2,
-      scaleY: 0.2,
-      duration: 400,
-      ease: 'Quad.easeIn'
-    });
-
-    // Show respawn banner anchored to camera viewport
-    const cam = this.scene.cameras.main;
-    const deathBanner = this.scene.add.text(
-      cam.scrollX + cam.width / 2,
-      cam.scrollY + cam.height / 2 - 30,
-      'TEMPORAL DISRUPTION — REBOOTING MATRIX',
-      {
-        fontFamily: 'Orbitron, sans-serif',
-        fontSize: '22px',
-        fontStyle: 'bold',
-        color: '#ef4444',
-        letterSpacing: 3
-      }
-    ).setOrigin(0.5).setDepth(45);
-
-    this.scene.tweens.add({
-      targets: deathBanner,
-      alpha: 0.3,
-      yoyo: true,
-      repeat: 3,
-      duration: 180,
-      onComplete: () => deathBanner.destroy()
-    });
-
-    // Notify scene to respawn at latest checkpoint or restart
-    this.scene.time.delayedCall(1200, () => {
+    // Fallback if standalone scene
+    this.scene.time.delayedCall(400, () => {
       if (this.scene.handlePlayerDeath) {
         this.scene.handlePlayerDeath();
       } else {

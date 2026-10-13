@@ -33,13 +33,14 @@ export default class FoundationTestScene extends Phaser.Scene {
     this.countdownSeconds = GAME_SETTINGS.COUNTDOWN_SECONDS;
     this.currentSectionName = 'SEC A: AWAKENING';
     this.isLevelComplete = false;
+    this.isGameOver = false;
     this.latestCheckpoint = { x: 120, y: groundY - 50, sectionId: 'A', title: 'SEC A: AWAKENING' };
     this.visitedSections = new Set(['A']);
     this.checkpointsActivatedCount = 0;
     this.coreFragmentsCollected = 0;
 
-    // 2. Physics World & Camera Setup
-    this.physics.world.setBounds(0, 0, worldWidth, baseHeight + 100);
+    // 2. Physics World & Camera Setup (generous bottom world bounds so falls through holes are unhindered)
+    this.physics.world.setBounds(0, 0, worldWidth, 2000);
     this.cameras.main.setBounds(0, 0, worldWidth, baseHeight);
     this.cameras.main.setViewport(0, 0, width, height);
     this.cameras.main.fadeIn(350, 5, 8, 20);
@@ -159,7 +160,7 @@ export default class FoundationTestScene extends Phaser.Scene {
       const pitW = endX - startX;
       const pit = this.pitZones.create(startX + pitW / 2, groundY + 50, null);
       pit.setVisible(false);
-      pit.body.setSize(pitW, 60);
+      pit.body.setSize(pitW, 140);
       pit.body.setAllowGravity(false);
       pit.body.setImmovable(true);
 
@@ -244,11 +245,9 @@ export default class FoundationTestScene extends Phaser.Scene {
     // Camera follow configuration
     this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
 
-    // Void Pit Collision (Lethal fall recovery to last valid checkpoint)
+    // Void Pit Collision (Lethal fall triggers immediate game over)
     this.physics.add.overlap(this.player, this.pitZones, () => {
-      if (!this.player.isDead) {
-        this.player.die();
-      }
+      this.triggerGameOver('abyss');
     });
 
     // 6. PHASE 5 CHECKPOINTS
@@ -625,7 +624,7 @@ export default class FoundationTestScene extends Phaser.Scene {
       delay: 1000,
       loop: true,
       callback: () => {
-        if (!this.isLevelComplete && this.countdownSeconds > 0) {
+        if (!this.isLevelComplete && !this.isGameOver && !this.isGamePaused && this.countdownSeconds > 0) {
           this.countdownSeconds--;
         }
       }
@@ -656,14 +655,14 @@ export default class FoundationTestScene extends Phaser.Scene {
 
     // Q: Chrono Freeze activation
     this.input.keyboard.on('keydown-Q', () => {
-      if (this.isLevelComplete || this.isGamePaused) return;
+      if (this.isLevelComplete || this.isGamePaused || this.isGameOver) return;
       const res = this.player.activateChronoFreeze(this.eligibleHazards);
       this.hud.triggerAbilityPulse('freeze', res.success);
     });
 
     // E or Shift: Chrono Dash activation
     const triggerDash = () => {
-      if (this.isLevelComplete || this.isGamePaused) return;
+      if (this.isLevelComplete || this.isGamePaused || this.isGameOver) return;
       const res = this.player.activateChronoDash();
       this.hud.triggerAbilityPulse('dash', res.success);
     };
@@ -673,7 +672,7 @@ export default class FoundationTestScene extends Phaser.Scene {
 
     // P or ESC: In-game Pause Menu
     const togglePause = () => {
-      if (this.isLevelComplete) return;
+      if (this.isLevelComplete || this.isGameOver) return;
       if (this.isGamePaused) {
         this.resumeGame();
       } else {
@@ -1072,26 +1071,65 @@ export default class FoundationTestScene extends Phaser.Scene {
   }
 
   /**
-   * Authoritative player death & checkpoint respawn handler
+   * Single authoritative game-over handler
+   * Halts player movement, hazards, abilities, and camera tracking, then shows Game Over overlay immediately
    */
-  handlePlayerDeath() {
-    if (this.isGamePaused) this.resumeGame();
-    if (this.chronoCore) this.chronoCore.resetEncounter();
+  triggerGameOver(reason = 'abyss') {
+    if (this.isGameOver || this.isLevelComplete) return;
+    this.isGameOver = true;
 
+    // Immediately stop camera following into the abyss
+    this.cameras.main.stopFollow();
+
+    // Safely stop and disable player physics, movement, and abilities
+    if (this.player) {
+      this.player.isDead = true;
+      this.player.setVelocity(0, 0);
+      if (this.player.body) {
+        this.player.body.setAllowGravity(false);
+        this.player.body.enable = false;
+        this.player.body.stop();
+      }
+      this.player.clearActiveTimers();
+    }
+
+    // Freeze all hazards and active projectiles
+    if (this.eligibleHazards) {
+      this.eligibleHazards.forEach(h => {
+        if (h && h.freeze) h.freeze(999999);
+      });
+    }
+
+    // Reset boss encounter if active
+    if (this.chronoCore) {
+      this.chronoCore.resetEncounter();
+    }
+
+    // Calculate stats
     const totalSec = Math.max(0, Math.floor(this.countdownSeconds));
     const mins = Math.floor(totalSec / 60);
     const secs = totalSec % 60;
     const timeStr = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 
+    const message = reason === 'abyss'
+      ? 'Kael has fallen into the temporal abyss.'
+      : reason === 'hazard'
+        ? 'Kael suffered critical chronal disruption.'
+        : 'Timeline collapsed before reaching the core.';
+
+    // Show Game Over UI immediately
     this.hud.showGameOverOverlay(
       {
+        reason,
+        message,
         score: this.score,
-        checkpoint: `CP-${this.latestCheckpoint.sectionId} [${this.latestCheckpoint.title}]`,
+        checkpointId: this.latestCheckpoint.sectionId,
+        checkpointTitle: this.latestCheckpoint.title,
         coreFragments: this.coreFragmentsCollected,
         timeStr
       },
       () => {
-        this.player.respawnAt(this.latestCheckpoint.x, this.latestCheckpoint.y);
+        this.retryFromCheckpoint();
       },
       () => {
         this.scene.restart();
@@ -1100,6 +1138,40 @@ export default class FoundationTestScene extends Phaser.Scene {
         this.scene.start('MenuScene');
       }
     );
+  }
+
+  /**
+   * Resumes gameplay cleanly from the latest anchored checkpoint
+   */
+  retryFromCheckpoint() {
+    this.isGameOver = false;
+    this.isGamePaused = false;
+
+    // Respawn player cleanly at checkpoint coordinates with full health & energy
+    this.player.respawnAt(this.latestCheckpoint.x, this.latestCheckpoint.y);
+
+    // Re-engage camera follow
+    this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
+
+    // Unfreeze hazards
+    if (this.eligibleHazards) {
+      this.eligibleHazards.forEach(h => {
+        if (h && h.unfreeze) h.unfreeze();
+        else if (h && h.isFrozen) h.isFrozen = false;
+      });
+    }
+
+    // Reset boss arena if active
+    if (this.chronoCore) {
+      this.chronoCore.resetEncounter();
+    }
+  }
+
+  /**
+   * Authoritative player death handler (invoked by hazards / health loss)
+   */
+  handlePlayerDeath() {
+    this.triggerGameOver('hazard');
   }
 
   /**
@@ -1143,11 +1215,15 @@ export default class FoundationTestScene extends Phaser.Scene {
   }
 
   update(time, delta) {
-    if (this.isGamePaused) return;
+    if (this.isGamePaused || this.isGameOver || this.isLevelComplete) return;
 
-    // Pit fall check (reboot matrix cleanly if falling below bottom platform line)
-    if (this.player && this.player.y > 670 && !this.player.isDead) {
-      this.player.die();
+    // Robust Pit & Hole Fall Detection
+    // All playable platforms are at groundY = 615 (surface y: 593).
+    // If player y >= 645, they have fallen through a hole or off the platform.
+    const FALL_THRESHOLD_Y = 645;
+    if (this.player && this.player.y >= FALL_THRESHOLD_Y) {
+      this.triggerGameOver('abyss');
+      return;
     }
 
     const isReduced = settingsManager.get('reducedMotion');

@@ -507,8 +507,16 @@ export class HUD {
   showGameOverOverlay(stats = {}, onRetry, onRestart, onMenu) {
     audioManager.play('death');
     const { width, height } = this.scene.scale;
-    const overlay = this.scene.add.container(width / 2, height / 2).setDepth(65);
+
+    // Prevent duplicate game-over overlays from stacking
+    if (this.currentGameOverOverlay) {
+      this.currentGameOverOverlay.destroy();
+      this.currentGameOverOverlay = null;
+    }
+
+    const overlay = this.scene.add.container(width / 2, height / 2).setDepth(100);
     overlay.setScrollFactor(0);
+    this.currentGameOverOverlay = overlay;
 
     // Dark backdrop overlay
     const bgDim = this.scene.add.graphics();
@@ -524,20 +532,31 @@ export class HUD {
     card.lineStyle(2, 0xef4444, 0.9);
     card.strokeRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 8);
 
-    // Header
-    const title = this.scene.add.text(0, -cardH / 2 + 45, 'TEMPORAL COLLAPSE // TIMELINE SEVERED', {
+    // Top danger accent notch lines
+    card.lineStyle(2, 0xef4444, 1);
+    const nLen = 14;
+    card.lineBetween(-cardW / 2, -cardH / 2 + nLen, -cardW / 2, -cardH / 2);
+    card.lineBetween(-cardW / 2, -cardH / 2, -cardW / 2 + nLen, -cardH / 2);
+    card.lineBetween(cardW / 2 - nLen, -cardH / 2, cardW / 2, -cardH / 2);
+    card.lineBetween(cardW / 2, -cardH / 2, cardW / 2, -cardH / 2 + nLen);
+
+    // Header: GAME OVER
+    const title = this.scene.add.text(0, -cardH / 2 + 42, 'GAME OVER', {
       fontFamily: 'Orbitron, sans-serif',
-      fontSize: '20px',
+      fontSize: '30px',
       fontStyle: 'bold',
       color: '#ef4444',
-      letterSpacing: 2
+      letterSpacing: 4
     }).setOrigin(0.5);
 
-    const subtitle = this.scene.add.text(0, -cardH / 2 + 75, `Kael Veyron's chronal matrix has destabilized in ${stats.sectionName || 'Sector'}.`, {
+    // Subtitle: Kael has fallen into the temporal abyss.
+    const messageText = stats.message || 'Kael has fallen into the temporal abyss.';
+    const subtitle = this.scene.add.text(0, -cardH / 2 + 76, messageText, {
       fontFamily: 'Rajdhani, sans-serif',
-      fontSize: '14px',
+      fontSize: '16px',
+      fontStyle: 'italic',
       fontWeight: '700',
-      color: '#94a3b8',
+      color: '#fca5a5',
       letterSpacing: 1
     }).setOrigin(0.5);
 
@@ -552,7 +571,7 @@ export class HUD {
 
     const statRows = [
       { label: 'LAST TEMPORAL ANCHOR:', val: `CP-${stats.checkpointId || 'A'} // ${stats.checkpointTitle || 'SEC A: AWAKENING'}` },
-      { label: 'CORE FRAGMENTS RECOVERED:', val: `${stats.fragments || 0} / 3` },
+      { label: 'CORE FRAGMENTS RECOVERED:', val: `${stats.coreFragments !== undefined ? stats.coreFragments : 0} / 3` },
       { label: 'MISSION SCORE:', val: `${stats.score || 0} PTS` },
       { label: 'TIME REMAINING:', val: `${stats.timeStr || '00:00'}` }
     ];
@@ -576,47 +595,44 @@ export class HUD {
       overlay.add([lbl, val]);
     });
 
-    // Action Buttons
-    const btnRetry = UIComponents.createButton(this.scene, -145, 145, 230, 42, 'RETRY AT CHECKPOINT [R]', {
+    const cleanup = () => {
+      window.removeEventListener('keydown', onKeyDown);
+      if (this.currentGameOverOverlay === overlay) {
+        this.currentGameOverOverlay = null;
+      }
+      overlay.destroy();
+    };
+
+    // Action Buttons: RETRY and MAIN MENU
+    const btnRetry = UIComponents.createButton(this.scene, -125, 145, 210, 44, 'RETRY [R / ENTER]', {
       isPrimary: true,
       onClick: () => {
         audioManager.play('uiClick');
-        overlay.destroy();
+        cleanup();
         if (onRetry) onRetry();
       }
     });
 
-    const btnRestart = UIComponents.createButton(this.scene, 145, 145, 230, 42, 'RESTART MISSION', {
+    const btnMenu = UIComponents.createButton(this.scene, 125, 145, 210, 44, 'MAIN MENU [ESC]', {
       isPrimary: false,
       onClick: () => {
         audioManager.play('uiClick');
-        overlay.destroy();
-        if (onRestart) onRestart();
-      }
-    });
-
-    const btnMenu = UIComponents.createButton(this.scene, 0, 195, 250, 36, 'ABORT TO MAIN MENU [ESC]', {
-      isPrimary: false,
-      onClick: () => {
-        audioManager.play('uiClick');
-        overlay.destroy();
+        cleanup();
         if (onMenu) onMenu();
       }
     });
 
-    overlay.add([btnRetry, btnRestart, btnMenu]);
+    overlay.add([btnRetry, btnMenu]);
 
     // Keyboard handlers
     const onKeyDown = (e) => {
       if (e.code === 'KeyR' || e.code === 'Enter') {
-        window.removeEventListener('keydown', onKeyDown);
+        cleanup();
         audioManager.play('uiClick');
-        overlay.destroy();
         if (onRetry) onRetry();
       } else if (e.code === 'Escape') {
-        window.removeEventListener('keydown', onKeyDown);
+        cleanup();
         audioManager.play('uiClick');
-        overlay.destroy();
         if (onMenu) onMenu();
       }
     };
@@ -626,7 +642,7 @@ export class HUD {
     this.scene.tweens.add({
       targets: overlay,
       alpha: 1,
-      duration: 300,
+      duration: 250,
       ease: 'Quad.easeOut'
     });
   }

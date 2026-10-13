@@ -1,0 +1,73 @@
+import Phaser from 'phaser';
+import BootScene from '../scenes/BootScene.js';
+import PreloadScene from '../scenes/PreloadScene.js';
+import MenuScene from '../scenes/MenuScene.js';
+import BriefingScene from '../scenes/BriefingScene.js';
+import FoundationTestScene from '../scenes/FoundationTestScene.js';
+
+export const GAME_SETTINGS = {
+  CANVAS_WIDTH: 1280,
+  CANVAS_HEIGHT: 720,
+  TARGET_FPS: 60,
+  
+  // Tunable Player Attributes (Centralized per SPEC Section 17 & Section 6)
+  PLAYER: {
+    RUN_SPEED: 320,
+    JUMP_VELOCITY: -520,
+    SLIDE_VELOCITY: 420,
+    SLIDE_DURATION_MS: 450,
+    MAX_HEALTH: 100,
+    INVULNERABILITY_MS: 1200
+  },
+
+  // Chrono Abilities (SPEC Section 7)
+  CHRONO: {
+    MAX_ENERGY: 100,
+    CELL_RECHARGE_AMOUNT: 20,
+    FREEZE_COST: 35,
+    FREEZE_DURATION_MS: 2000,
+    DASH_COST: 25,
+    DASH_DURATION_MS: 300,
+    DASH_SPEED_MULTIPLIER: 2.5
+  },
+
+  // Mission Countdown (SPEC Section 12)
+  COUNTDOWN_SECONDS: 180,
+
+  // Theme Colors
+  COLORS: {
+    PRIMARY_CYAN: 0x00f0ff,
+    ACCENT_PURPLE: 0xa855f7,
+    ALERT_AMBER: 0xf59e0b,
+    DANGER_RED: 0xef4444,
+    DARK_BG: 0x0a0d18,
+    SURFACE_DARK: 0x111827,
+    TEXT_LIGHT: 0xe2e8f0
+  }
+};
+
+export const gameConfig = {
+  type: Phaser.AUTO,
+  parent: 'game-container',
+  width: GAME_SETTINGS.CANVAS_WIDTH,
+  height: GAME_SETTINGS.CANVAS_HEIGHT,
+  backgroundColor: '#0a0d18',
+  scale: {
+    mode: Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH,
+    width: GAME_SETTINGS.CANVAS_WIDTH,
+    height: GAME_SETTINGS.CANVAS_HEIGHT
+  },
+  physics: {
+    default: 'arcade',
+    arcade: {
+      gravity: { y: 800, x: 0 },
+      debug: false
+    }
+  },
+  render: {
+    pixelArt: false,
+    antialias: true
+  },
+  scene: [BootScene, PreloadScene, MenuScene, BriefingScene, FoundationTestScene]
+};

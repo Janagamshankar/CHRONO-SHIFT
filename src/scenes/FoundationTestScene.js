@@ -1,6 +1,9 @@
 import Phaser from 'phaser';
 import { GAME_SETTINGS } from '../config/gameConfig.js';
 import { settingsManager } from '../systems/SettingsManager.js';
+import { Player } from '../entities/Player.js';
+import { HUD } from '../ui/HUD.js';
+import { ChronoVFX } from '../effects/ChronoVFX.js';
 
 export default class FoundationTestScene extends Phaser.Scene {
   constructor() {
@@ -14,32 +17,26 @@ export default class FoundationTestScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, width, height);
     this.cameras.main.fadeIn(350, 5, 8, 20);
 
-    // 2. Layered Futuristic City Above Clouds (Visual Overhaul)
-    // Layer A: Atmospheric Sky Gradient
+    // 2. Parallax Environment (Visual Foundation)
     this.add.image(width / 2, height / 2, 'bg_sky_gradient').setDepth(0);
 
-    // Deep violet anomaly glow in the upper stratosphere
     const anomalyGlow = this.add.graphics().setDepth(1);
     anomalyGlow.fillStyle(0x3b0764, 0.25);
     anomalyGlow.fillCircle(width / 2, height / 2 - 80, 360);
 
-    // Layer B: Distant Spires & Skyline
     this.bgSkyline = this.add.tileSprite(width / 2, 360, width, 400, 'bg_distant_skyline').setDepth(2);
     this.bgSkyline.setAlpha(0.65);
 
-    // Layer C: Volumetric Cloud Deck Drifting Over Skyline Base
     this.bgCloudsBack = this.add.tileSprite(width / 2, 450, width, 240, 'cloud_bank_layer').setDepth(3);
     this.bgCloudsBack.setAlpha(0.75);
 
-    // Layer D: Midground High-Tech City & Energy Conduits
     this.bgCity = this.add.tileSprite(width / 2, 460, width, 450, 'bg_midground_city').setDepth(4);
     this.bgCity.setAlpha(0.9);
 
-    // Layer E: Lower Cloud Deck Underneath Midground
     this.bgCloudsFront = this.add.tileSprite(width / 2, 530, width, 240, 'cloud_bank_layer').setDepth(5);
     this.bgCloudsFront.setAlpha(0.5);
 
-    // Floating Geometric Shards (Temporal crystal fragments drifting above clouds)
+    // Floating Geometric Shards
     this.shards = [];
     for (let i = 0; i < 5; i++) {
       const shard = this.add.image(140 + i * 250, 180 + (i % 3) * 60, 'geometric_shard').setDepth(6);
@@ -60,7 +57,7 @@ export default class FoundationTestScene extends Phaser.Scene {
       }
     }
 
-    // Atmospheric Temporal Particles (Cyan & Purple mists drifting)
+    // Atmospheric Temporal Particles
     this.particles = [];
     for (let i = 0; i < 18; i++) {
       const pKey = i % 2 === 0 ? 'particle_cyan' : 'particle_purple';
@@ -76,29 +73,7 @@ export default class FoundationTestScene extends Phaser.Scene {
       this.particles.push(p);
     }
 
-    // 3. Cinematic Scene Title & World Context
-    this.sceneHeader = this.add.container(width / 2, 55).setDepth(20);
-
-    const titleTxt = this.add.text(0, -12, 'CHRONO SHIFT', {
-      fontFamily: 'Orbitron, sans-serif',
-      fontSize: '34px',
-      fontStyle: '900',
-      color: '#00f0ff',
-      letterSpacing: 6,
-      shadow: { offsetX: 0, offsetY: 0, color: '#38bdf8', blur: 10, stroke: true, fill: true }
-    }).setOrigin(0.5);
-
-    const tagTxt = this.add.text(0, 22, '“Bend Time. Defy Fate.” — SECTOR AETHELON 2189', {
-      fontFamily: 'Rajdhani, sans-serif',
-      fontSize: '16px',
-      fontWeight: '600',
-      color: '#c084fc',
-      letterSpacing: 3
-    }).setOrigin(0.5);
-
-    this.sceneHeader.add([titleTxt, tagTxt]);
-
-    // 4. High-Tech Suspended Gameplay Platform (Task 10 & Visual Overhaul)
+    // 3. High-Tech Suspended Platform
     this.groundPlatforms = this.physics.add.staticGroup();
     const groundY = 615;
     const tileWidth = 64;
@@ -110,7 +85,6 @@ export default class FoundationTestScene extends Phaser.Scene {
       tile.setDepth(15);
       tile.refreshBody();
 
-      // Add downward anti-gravity glow cone beneath every 3rd tile emitter
       if (i % 3 === 1) {
         const agGlow = this.add.image(tileX, groundY + 34, 'anti_grav_glow').setDepth(14);
         agGlow.setAlpha(0.65);
@@ -126,56 +100,176 @@ export default class FoundationTestScene extends Phaser.Scene {
       }
     }
 
-    // Continuous glowing dual-beam energy rail across the platform surface
     const energyRail = this.add.graphics().setDepth(16);
     energyRail.lineStyle(2, 0x00f0ff, 0.9);
     energyRail.lineBetween(0, groundY - 22, width, groundY - 22);
     energyRail.lineStyle(1, 0xffffff, 0.8);
     energyRail.lineBetween(0, groundY - 22, width, groundY - 22);
 
-    // 5. Player Placeholder (Standing on High-Tech Platform)
-    const spawnX = 260;
-    const spawnY = groundY - 50;
-
-    this.player = this.physics.add.sprite(spawnX, spawnY, 'player_avatar').setDepth(18);
-    this.player.setCollideWorldBounds(true);
-    this.player.body.setSize(24, 46);
-    this.player.body.setOffset(4, 2);
-
-    // Collision between player and suspended platform
+    // 4. Player Entity Setup
+    this.player = new Player(this, 180, groundY - 50);
     this.physics.add.collider(this.player, this.groundPlatforms);
 
-    // Subtle gauntlet idle pulse
-    this.tweens.add({
-      targets: this.player,
-      alpha: 0.9,
-      duration: 1000,
+    // 5. Eligible Freeze Hazards & Interactive Elements
+    this.eligibleHazards = [];
+
+    // Hazard A: Rotating Geometric Blade
+    this.rotor = this.add.image(width / 2 + 100, groundY - 65, 'hazard_triangle').setDepth(18);
+    this.rotor.setScale(1.5);
+    this.rotor.isFrozen = false;
+    this.rotor.angularVelocity = 2.0;
+
+    this.rotor.freeze = (duration) => {
+      this.rotor.isFrozen = true;
+      this.rotor.setTint(0x00f0ff);
+      // Frozen rim outline ring
+      const rim = this.add.image(this.rotor.x, this.rotor.y, 'vfx_freeze_crystal').setScale(2.5).setDepth(19);
+
+      this.time.delayedCall(duration, () => {
+        this.rotor.isFrozen = false;
+        this.rotor.clearTint();
+        if (rim) rim.destroy();
+        ChronoVFX.spawnFreezeRelease(this, this.rotor.x, this.rotor.y);
+      });
+    };
+    this.eligibleHazards.push(this.rotor);
+
+    // Hazard B: Moving Plasma Projectile
+    this.projectile = this.add.image(width / 2 + 280, groundY - 60, 'hazard_projectile').setDepth(18);
+    this.projectile.isFrozen = false;
+    this.projTween = this.tweens.add({
+      targets: this.projectile,
+      x: width / 2 + 480,
+      duration: 1600,
       yoyo: true,
       repeat: -1,
       ease: 'Sine.easeInOut'
     });
 
-    // 6. Interactive Temporal Demonstration Objects
-    // Rotating Geometric Hazard (Triangular Blade)
-    this.rotor = this.add.image(width / 2 + 120, groundY - 70, 'hazard_triangle').setDepth(18);
-    this.rotor.setScale(1.6);
+    this.projectile.freeze = (duration) => {
+      this.projectile.isFrozen = true;
+      this.projectile.setTint(0x00f0ff);
+      if (this.projTween) this.projTween.pause();
 
-    // Chrono Cell Energy Orb
-    this.cellOrb = this.add.image(width / 2 + 220, groundY - 75, 'cell_orb').setDepth(18);
-    this.cellOrb.setScale(1.4);
-    this.tweens.add({
-      targets: this.cellOrb,
-      y: groundY - 95,
-      duration: 1100,
+      this.time.delayedCall(duration, () => {
+        this.projectile.isFrozen = false;
+        this.projectile.clearTint();
+        if (this.projTween) this.projTween.resume();
+        ChronoVFX.spawnFreezeRelease(this, this.projectile.x, this.projectile.y);
+      });
+    };
+    this.eligibleHazards.push(this.projectile);
+
+    // Hazard C: Suspended Moving Platform
+    this.movePlatform = this.physics.add.image(width / 2 - 120, groundY - 140, 'moving_platform_tile');
+    this.movePlatform.setImmovable(true);
+    this.movePlatform.body.setAllowGravity(false);
+    this.movePlatform.setDepth(16);
+    this.movePlatform.isFrozen = false;
+
+    this.platformTween = this.tweens.add({
+      targets: this.movePlatform,
+      x: width / 2 + 40,
+      duration: 2200,
       yoyo: true,
       repeat: -1,
       ease: 'Sine.easeInOut'
     });
 
-    // 7. Diagnostics & Debug Overlay (HIDDEN BY DEFAULT during normal gameplay)
+    this.movePlatform.freeze = (duration) => {
+      this.movePlatform.isFrozen = true;
+      this.movePlatform.setTint(0x00f0ff);
+      if (this.platformTween) this.platformTween.pause();
+
+      this.time.delayedCall(duration, () => {
+        this.movePlatform.isFrozen = false;
+        this.movePlatform.clearTint();
+        if (this.platformTween) this.platformTween.resume();
+        ChronoVFX.spawnFreezeRelease(this, this.movePlatform.x, this.movePlatform.y);
+      });
+    };
+    this.eligibleHazards.push(this.movePlatform);
+    this.physics.add.collider(this.player, this.movePlatform);
+
+    // 6. Collectible Chrono Cell
+    this.chronoCell = this.physics.add.image(width / 2 - 40, groundY - 180, 'cell_orb').setDepth(18);
+    this.chronoCell.body.setAllowGravity(false);
+    this.chronoCell.setScale(1.2);
+
+    this.tweens.add({
+      targets: this.chronoCell,
+      y: groundY - 195,
+      duration: 1200,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+
+    // Overlap collection handler
+    this.physics.add.overlap(this.player, this.chronoCell, () => {
+      if (!this.chronoCell.visible) return;
+      this.chronoCell.setVisible(false);
+      this.player.rechargeEnergy(GAME_SETTINGS.CHRONO.CELL_RECHARGE_AMOUNT);
+
+      // Respawn cell after 4 seconds for continuous testing
+      this.time.delayedCall(4000, () => {
+        this.chronoCell.setVisible(true);
+      });
+    });
+
+    // 7. Mission Countdown Timer
+    this.countdownSeconds = GAME_SETTINGS.COUNTDOWN_SECONDS;
+    this.timerEvent = this.time.addEvent({
+      delay: 1000,
+      loop: true,
+      callback: () => {
+        if (this.countdownSeconds > 0) {
+          this.countdownSeconds--;
+        }
+      }
+    });
+
+    // 8. In-Game HUD
+    this.hud = new HUD(this);
+
+    // 9. Input Setup
+    this.cursors = this.input.keyboard.createCursorKeys();
+    this.keys = this.input.keyboard.addKeys({
+      A: Phaser.Input.Keyboard.KeyCodes.A,
+      D: Phaser.Input.Keyboard.KeyCodes.D,
+      W: Phaser.Input.Keyboard.KeyCodes.W,
+      S: Phaser.Input.Keyboard.KeyCodes.S,
+      SPACE: Phaser.Input.Keyboard.KeyCodes.SPACE,
+      Q: Phaser.Input.Keyboard.KeyCodes.Q,
+      E: Phaser.Input.Keyboard.KeyCodes.E,
+      SHIFT: Phaser.Input.Keyboard.KeyCodes.SHIFT,
+      ESC: Phaser.Input.Keyboard.KeyCodes.ESC,
+      TILDE: Phaser.Input.Keyboard.KeyCodes.TILDE
+    });
+
+    // Q: Chrono Freeze activation
+    this.input.keyboard.on('keydown-Q', () => {
+      const res = this.player.activateChronoFreeze(this.eligibleHazards);
+      this.hud.triggerAbilityPulse('freeze', res.success);
+    });
+
+    // E or Shift: Chrono Dash activation
+    const triggerDash = () => {
+      const res = this.player.activateChronoDash();
+      this.hud.triggerAbilityPulse('dash', res.success);
+    };
+
+    this.input.keyboard.on('keydown-E', triggerDash);
+    this.input.keyboard.on('keydown-SHIFT', triggerDash);
+
+    // ESC: Return to Menu
+    this.input.keyboard.on('keydown-ESC', () => {
+      this.scene.start('MenuScene');
+    });
+
+    // Diagnostics toggle (~ or D)
     this.debugVisible = false;
-    this.debugContainer = this.add.container(width / 2 + 160, 260).setDepth(30);
-
+    this.debugContainer = this.add.container(width / 2 + 160, 260).setDepth(50);
     const panelWidth = 520;
     const panelHeight = 200;
     const panelBg = this.add.graphics();
@@ -190,78 +284,39 @@ export default class FoundationTestScene extends Phaser.Scene {
       color: '#e2e8f0',
       lineSpacing: 6
     });
-
     this.debugContainer.add([panelBg, this.diagText]);
-    this.debugContainer.setVisible(false); // Clean cinematic display
-
-    // 8. Sleek Bottom Prompt HUD
-    this.bottomPrompt = this.add.text(
-      width / 2,
-      height - 30,
-      '[ Spacebar / Click ] Trigger Pulse   •   [ ESC ] Return to Menu   •   [ ~ / D ] Toggle Diagnostics',
-      {
-        fontFamily: 'Rajdhani, sans-serif',
-        fontSize: '15px',
-        fontWeight: '600',
-        color: '#38bdf8',
-        letterSpacing: 2
-      }
-    ).setOrigin(0.5).setDepth(25);
-
-    this.tweens.add({
-      targets: this.bottomPrompt,
-      alpha: 0.45,
-      duration: 900,
-      yoyo: true,
-      repeat: -1
-    });
-
-    // 9. Input & Interactive Handlers
-    const triggerPulse = () => {
-      const ring = this.add.graphics().setDepth(22);
-      ring.lineStyle(3, 0x00f0ff, 1);
-      ring.strokeCircle(this.player.x, this.player.y, 16);
-
-      this.tweens.add({
-        targets: ring,
-        scale: 4.5,
-        alpha: 0,
-        duration: 480,
-        ease: 'Cubic.easeOut',
-        onComplete: () => ring.destroy()
-      });
-
-      this.tweens.add({
-        targets: [this.player, this.rotor],
-        scale: 1.85,
-        duration: 120,
-        yoyo: true
-      });
-    };
-
-    const returnToMenu = () => {
-      this.scene.start('MenuScene');
-    };
+    this.debugContainer.setVisible(false);
 
     const toggleDiagnostics = () => {
       this.debugVisible = !this.debugVisible;
       this.debugContainer.setVisible(this.debugVisible);
     };
-
-    this.input.on('pointerdown', triggerPulse);
-    this.input.keyboard.on('keydown-SPACE', triggerPulse);
-    this.input.keyboard.on('keydown-ESC', returnToMenu);
     this.input.keyboard.on('keydown-TILDE', toggleDiagnostics);
     this.input.keyboard.on('keydown-D', toggleDiagnostics);
 
-    // Shutdown cleanup
+    // 10. Sleek Controls Bar
+    this.controlsPrompt = this.add.text(
+      width / 2,
+      height - 18,
+      '[ A / D ] Move  •  [ Space ] Jump  •  [ S ] Slide  •  [ Q ] Freeze (35)  •  [ E ] Dash (25)  •  [ ESC ] Menu',
+      {
+        fontFamily: 'Rajdhani, sans-serif',
+        fontSize: '14px',
+        fontWeight: '600',
+        color: '#64748b',
+        letterSpacing: 2
+      }
+    ).setOrigin(0.5).setDepth(35);
+
+    // Cleanup listeners on shutdown
     this.events.on('shutdown', () => {
-      this.input.off('pointerdown', triggerPulse);
-      if (this.input.keyboard) {
-        this.input.keyboard.off('keydown-SPACE', triggerPulse);
-        this.input.keyboard.off('keydown-ESC', returnToMenu);
-        this.input.keyboard.off('keydown-TILDE', toggleDiagnostics);
-        this.input.keyboard.off('keydown-D', toggleDiagnostics);
+      if (this.input && this.input.keyboard) {
+        this.input.keyboard.off('keydown-Q');
+        this.input.keyboard.off('keydown-E');
+        this.input.keyboard.off('keydown-SHIFT');
+        this.input.keyboard.off('keydown-ESC');
+        this.input.keyboard.off('keydown-TILDE');
+        this.input.keyboard.off('keydown-D');
       }
     });
   }
@@ -269,7 +324,7 @@ export default class FoundationTestScene extends Phaser.Scene {
   update(time, delta) {
     const isReduced = settingsManager.get('reducedMotion');
 
-    // Smooth multi-depth parallax drifting
+    // 1. Parallax environment drift
     if (!isReduced) {
       if (this.bgSkyline) this.bgSkyline.tilePositionX += 0.12;
       if (this.bgCloudsBack) this.bgCloudsBack.tilePositionX += 0.28;
@@ -277,12 +332,22 @@ export default class FoundationTestScene extends Phaser.Scene {
       if (this.bgCloudsFront) this.bgCloudsFront.tilePositionX += 0.65;
     }
 
-    // Angular hazard rotation
-    if (this.rotor) {
-      this.rotor.angle += 1.5;
+    // 2. Player movement update
+    if (this.player) {
+      this.player.updateMovement(this.cursors, this.keys);
     }
 
-    // Drifting atmospheric particles
+    // 3. Hazard angular rotation (frozen check)
+    if (this.rotor && !this.rotor.isFrozen) {
+      this.rotor.angle += this.rotor.angularVelocity;
+    }
+
+    // 4. Update HUD
+    if (this.hud && this.player) {
+      this.hud.update(this.player, this.countdownSeconds);
+    }
+
+    // 5. Drifting particles
     const { width, height } = this.scale;
     if (this.particles) {
       this.particles.forEach(p => {
@@ -294,16 +359,16 @@ export default class FoundationTestScene extends Phaser.Scene {
       });
     }
 
-    // Diagnostics update (only when toggled on)
+    // 6. Diagnostics readout (if toggled)
     if (this.debugVisible && this.diagText && this.game.loop && this.player) {
-      const currentFps = Math.round(this.game.loop.actualFps);
       const lines = [
         `[DIAGNOSTICS MODE ACTIVE]`,
-        `Engine: Phaser v${Phaser.VERSION} (${this.game.renderer.type === Phaser.WEBGL ? 'WebGL' : 'Canvas'})`,
-        `Resolution: ${GAME_SETTINGS.CANVAS_WIDTH} x ${GAME_SETTINGS.CANVAS_HEIGHT}`,
-        `Player: Grounded (x:${Math.round(this.player.x)}, y:${Math.round(this.player.y)})`,
-        `Bounds: 24x46 [Arcade Physics]`,
-        `FPS: ${currentFps} / 60`
+        `FPS: ${Math.round(this.game.loop.actualFps)} / 60`,
+        `Player State: x:${Math.round(this.player.x)}, y:${Math.round(this.player.y)} | Facing:${this.player.facing}`,
+        `Dash State: ${this.player.isDashing ? 'ACTIVE' : 'IDLE'} | Slide: ${this.player.isSliding ? 'ACTIVE' : 'IDLE'}`,
+        `Chrono Energy: ${Math.round(this.player.energy)} / 100`,
+        `Countdown: ${this.countdownSeconds}s (Active: ${!this.scene.isPaused()})`,
+        `Hazards Frozen: ${this.rotor && this.rotor.isFrozen ? 'YES' : 'NO'}`
       ];
       this.diagText.setText(lines);
     }

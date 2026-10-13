@@ -359,6 +359,62 @@ export default class PreloadScene extends Phaser.Scene {
     agGfx.fillPath();
     agGfx.generateTexture('anti_grav_glow', 32, 28);
     agGfx.destroy();
+
+    // 15. Freeze Shockwave Ring (128x128)
+    const shockGfx = this.make.graphics({ x: 0, y: 0, add: false });
+    shockGfx.lineStyle(4, 0x00f0ff, 1);
+    shockGfx.strokeCircle(64, 64, 60);
+    shockGfx.lineStyle(2, 0xffffff, 0.9);
+    shockGfx.strokeCircle(64, 64, 59);
+    shockGfx.lineStyle(6, 0xa855f7, 0.4);
+    shockGfx.strokeCircle(64, 64, 56);
+    shockGfx.generateTexture('vfx_shockwave_ring', 128, 128);
+    shockGfx.destroy();
+
+    // 16. Dash Tapered Streak (48x12)
+    const dashGfx = this.make.graphics({ x: 0, y: 0, add: false });
+    dashGfx.fillStyle(0x00f0ff, 0.9);
+    dashGfx.beginPath();
+    dashGfx.moveTo(0, 6);
+    dashGfx.lineTo(48, 1);
+    dashGfx.lineTo(48, 11);
+    dashGfx.closePath();
+    dashGfx.fillPath();
+    dashGfx.fillStyle(0xffffff, 1);
+    dashGfx.fillRect(24, 4, 24, 4);
+    dashGfx.generateTexture('vfx_dash_streak', 48, 12);
+    dashGfx.destroy();
+
+    // 17. Freeze Frost Crystal (16x16)
+    const frostGfx = this.make.graphics({ x: 0, y: 0, add: false });
+    frostGfx.lineStyle(1.5, 0x00f0ff, 1);
+    frostGfx.fillStyle(0xffffff, 0.85);
+    frostGfx.strokeCircle(8, 8, 6);
+    frostGfx.fillCircle(8, 8, 3);
+    frostGfx.generateTexture('vfx_freeze_crystal', 16, 16);
+    frostGfx.destroy();
+
+    // 18. Plasma Projectile Hazard (28x28)
+    const projGfx = this.make.graphics({ x: 0, y: 0, add: false });
+    projGfx.fillStyle(0xef4444, 0.4);
+    projGfx.fillCircle(14, 14, 14);
+    projGfx.fillStyle(0xf59e0b, 0.8);
+    projGfx.fillCircle(14, 14, 9);
+    projGfx.fillStyle(0xffffff, 1);
+    projGfx.fillCircle(14, 14, 4);
+    projGfx.generateTexture('hazard_projectile', 28, 28);
+    projGfx.destroy();
+
+    // 19. Moving Platform Tile (96x28)
+    const movPlatGfx = this.make.graphics({ x: 0, y: 0, add: false });
+    movPlatGfx.fillStyle(0x111c38, 1);
+    movPlatGfx.fillRoundedRect(0, 0, 96, 28, 4);
+    movPlatGfx.lineStyle(1.5, 0x00f0ff, 0.8);
+    movPlatGfx.strokeRoundedRect(0, 0, 96, 28, 4);
+    movPlatGfx.fillStyle(0x00f0ff, 1);
+    movPlatGfx.fillRect(4, 2, 88, 3);
+    movPlatGfx.generateTexture('moving_platform_tile', 96, 28);
+    movPlatGfx.destroy();
   }
 
   create() {

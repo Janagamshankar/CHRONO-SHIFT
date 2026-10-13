@@ -255,6 +255,110 @@ export default class PreloadScene extends Phaser.Scene {
     shardGfx.fillCircle(20, 20, 3);
     shardGfx.generateTexture('geometric_shard', 40, 40);
     shardGfx.destroy();
+
+    // 11. Atmospheric Sky Gradient (1280x720)
+    const skyGrad = this.make.graphics({ x: 0, y: 0, add: false });
+    // Layered gradient fill simulating atmospheric depth
+    for (let y = 0; y < 720; y += 4) {
+      const ratio = y / 720;
+      // Interpolate from deep cosmic navy (0x02040a) -> indigo (0x081026) -> temporal horizon haze (0x121e42)
+      let r, g, b;
+      if (ratio < 0.5) {
+        const t = ratio * 2;
+        r = Math.floor(2 + (8 - 2) * t);
+        g = Math.floor(4 + (16 - 4) * t);
+        b = Math.floor(10 + (38 - 10) * t);
+      } else {
+        const t = (ratio - 0.5) * 2;
+        r = Math.floor(8 + (18 - 8) * t);
+        g = Math.floor(16 + (30 - 16) * t);
+        b = Math.floor(38 + (66 - 38) * t);
+      }
+      const col = (r << 16) | (g << 8) | b;
+      skyGrad.fillStyle(col, 1);
+      skyGrad.fillRect(0, y, 1280, 4);
+    }
+    skyGrad.generateTexture('bg_sky_gradient', 1280, 720);
+    skyGrad.destroy();
+
+    // 12. Drifting Volumetric Cloud Deck (1280x240 seamless tile)
+    const cloudGfx = this.make.graphics({ x: 0, y: 0, add: false });
+    // Base cloud mist
+    cloudGfx.fillStyle(0x0a142e, 0.6);
+    cloudGfx.fillRect(0, 80, 1280, 160);
+
+    // Cloud puffs along the horizon
+    const cloudLobes = [
+      { x: 60, y: 120, r: 60 }, { x: 140, y: 100, r: 75 }, { x: 220, y: 110, r: 65 },
+      { x: 340, y: 130, r: 70 }, { x: 420, y: 95, r: 85 }, { x: 520, y: 115, r: 60 },
+      { x: 640, y: 125, r: 75 }, { x: 740, y: 105, r: 80 }, { x: 840, y: 120, r: 65 },
+      { x: 960, y: 130, r: 70 }, { x: 1060, y: 100, r: 85 }, { x: 1160, y: 115, r: 75 },
+      { x: 1240, y: 120, r: 65 }
+    ];
+
+    cloudLobes.forEach(c => {
+      // Darker base
+      cloudGfx.fillStyle(0x0e1a38, 0.7);
+      cloudGfx.fillCircle(c.x, c.y, c.r);
+      // Soft illuminated highlight edge
+      cloudGfx.fillStyle(0x1e3a6a, 0.35);
+      cloudGfx.fillCircle(c.x, c.y - 12, c.r * 0.85);
+      cloudGfx.fillStyle(0x38bdf8, 0.12);
+      cloudGfx.fillCircle(c.x, c.y - 20, c.r * 0.6);
+    });
+    cloudGfx.generateTexture('cloud_bank_layer', 1280, 240);
+    cloudGfx.destroy();
+
+    // 13. High-Tech Suspended Platform Tile (64x44)
+    const platGfx = this.make.graphics({ x: 0, y: 0, add: false });
+    // Composite platform chassis
+    platGfx.fillStyle(0x0c1322, 1);
+    platGfx.fillRect(0, 4, 64, 40);
+
+    // Bevel side borders
+    platGfx.lineStyle(1, 0x1e293b, 0.9);
+    platGfx.strokeRect(0, 4, 64, 40);
+
+    // Structural vents / tech trusses
+    platGfx.fillStyle(0x060911, 1);
+    platGfx.fillRect(8, 14, 20, 14);
+    platGfx.fillRect(36, 14, 20, 14);
+    platGfx.lineStyle(1, 0x1e3a8a, 0.5);
+    platGfx.strokeRect(8, 14, 20, 14);
+    platGfx.strokeRect(36, 14, 20, 14);
+
+    // Status micro-LED conduits
+    platGfx.fillStyle(0x00f0ff, 0.9);
+    platGfx.fillRect(10, 34, 4, 3);
+    platGfx.fillRect(18, 34, 4, 3);
+    platGfx.fillStyle(0xa855f7, 0.9);
+    platGfx.fillRect(38, 34, 4, 3);
+    platGfx.fillRect(46, 34, 4, 3);
+
+    // Luminous Energy Rail on top surface (4px dual-beam)
+    platGfx.fillStyle(0x00f0ff, 1);
+    platGfx.fillRect(0, 0, 64, 4);
+    platGfx.fillStyle(0xffffff, 0.8);
+    platGfx.fillRect(0, 1, 64, 1.5);
+
+    // Underside anti-gravity emitter node
+    platGfx.fillStyle(0x00f0ff, 0.7);
+    platGfx.fillRect(26, 40, 12, 4);
+
+    platGfx.generateTexture('platform_tech_tile', 64, 44);
+    platGfx.destroy();
+
+    // 14. Anti-gravity Downward Glow Flare
+    const agGfx = this.make.graphics({ x: 0, y: 0, add: false });
+    agGfx.fillStyle(0x00f0ff, 0.25);
+    agGfx.beginPath();
+    agGfx.moveTo(16, 0);
+    agGfx.lineTo(32, 28);
+    agGfx.lineTo(0, 28);
+    agGfx.closePath();
+    agGfx.fillPath();
+    agGfx.generateTexture('anti_grav_glow', 32, 28);
+    agGfx.destroy();
   }
 
   create() {

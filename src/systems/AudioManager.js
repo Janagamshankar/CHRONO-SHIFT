@@ -48,7 +48,7 @@ class AudioManager {
   init() {
     if (this.isInitialized && this.ctx) {
       if (this.ctx.state === 'suspended') {
-        this.ctx.resume().catch(() => {});
+        this.ctx.resume().catch(() => { });
       }
       return;
     }
@@ -86,7 +86,7 @@ class AudioManager {
 
       // Resume context if suspended by browser
       if (this.ctx.state === 'suspended') {
-        this.ctx.resume().catch(() => {});
+        this.ctx.resume().catch(() => { });
       }
     } catch (err) {
       console.warn('[AudioManager] Web Audio initialization deferred:', err);
@@ -636,7 +636,7 @@ class AudioManager {
       this.musicLoopTimer = null;
     }
     this.activeMusicNodes.forEach(n => {
-      try { n.stop(); } catch (e) {}
+      try { n.stop(); } catch (e) { }
     });
     this.activeMusicNodes = [];
   }

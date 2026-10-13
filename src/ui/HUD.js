@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_SETTINGS } from '../config/gameConfig.js';
+import { audioManager } from '../systems/AudioManager.js';
 
 export class HUD {
   constructor(scene) {
@@ -8,6 +9,39 @@ export class HUD {
 
     this.container = scene.add.container(0, 0).setDepth(40);
     this.container.setScrollFactor(0); // Anchors HUD to screen viewport
+
+    // Audio status indicator badge (bottom left)
+    const audioBadgeX = 24;
+    const audioBadgeY = height - 44;
+    this.audioBadge = scene.add.container(audioBadgeX + 60, audioBadgeY);
+    const badgeBg = scene.add.graphics();
+    const updateAudioBadgeGfx = (isMuted) => {
+      badgeBg.clear();
+      badgeBg.fillStyle(0x070c1b, 0.85);
+      badgeBg.fillRoundedRect(-60, -14, 120, 28, 4);
+      badgeBg.lineStyle(1.2, isMuted ? 0xef4444 : 0x00f0ff, 0.6);
+      badgeBg.strokeRoundedRect(-60, -14, 120, 28, 4);
+    };
+    updateAudioBadgeGfx(audioManager.isMuted);
+
+    this.audioText = scene.add.text(0, 0, audioManager.isMuted ? '[M] MUTED' : '[M] AUDIO ON', {
+      fontFamily: 'Orbitron, sans-serif',
+      fontSize: '11px',
+      fontStyle: 'bold',
+      color: audioManager.isMuted ? '#ef4444' : '#00f0ff',
+      letterSpacing: 1
+    }).setOrigin(0.5);
+
+    this.audioBadge.add([badgeBg, this.audioText]);
+    this.audioBadge.setSize(120, 28);
+    this.audioBadge.setInteractive({ useHandCursor: true });
+    this.audioBadge.on('pointerdown', () => {
+      const muted = audioManager.toggleMute();
+      this.updateAudioBadge(muted);
+      audioManager.play('uiClick');
+    });
+
+    this.container.add(this.audioBadge);
 
     // 1. Top Left: Operative Vitals Frame
     const vitalsX = 24;
@@ -257,6 +291,12 @@ export class HUD {
     }
   }
 
+  updateAudioBadge(isMuted) {
+    if (!this.audioText) return;
+    this.audioText.setText(isMuted ? '[M] MUTED' : '[M] AUDIO ON');
+    this.audioText.setColor(isMuted ? '#ef4444' : '#00f0ff');
+  }
+
   triggerAbilityPulse(abilityId, success) {
     const badge = abilityId === 'freeze' ? this.freezeBadge : this.dashBadge;
     if (!badge) return;
@@ -270,6 +310,7 @@ export class HUD {
         ease: 'Cubic.easeOut'
       });
     } else {
+      audioManager.play('abilityReject');
       this.scene.tweens.add({
         targets: badge.container,
         x: badge.container.x - 6,
@@ -294,6 +335,7 @@ export class HUD {
    * Displays victory level completion overlay
    */
   showVictoryOverlay(stats = {}) {
+    audioManager.play('victory');
     const { width, height } = this.scene.scale;
     const overlay = this.scene.add.container(width / 2, height / 2).setDepth(60);
     overlay.setScrollFactor(0);
@@ -378,6 +420,7 @@ export class HUD {
     btnReplay.setSize(btnW, btnH);
     btnReplay.setInteractive({ useHandCursor: true });
     btnReplay.on('pointerdown', () => {
+      audioManager.play('uiClick');
       this.scene.scene.restart();
     });
 
@@ -398,6 +441,7 @@ export class HUD {
     btnMenu.setSize(btnW, btnH);
     btnMenu.setInteractive({ useHandCursor: true });
     btnMenu.on('pointerdown', () => {
+      audioManager.play('uiClick');
       this.scene.scene.start('MenuScene');
     });
 

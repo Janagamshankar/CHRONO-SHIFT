@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_SETTINGS } from '../config/gameConfig.js';
 import { settingsManager } from '../systems/SettingsManager.js';
+import { audioManager } from '../systems/AudioManager.js';
 import { Player } from '../entities/Player.js';
 import { HUD } from '../ui/HUD.js';
 import { ChronoVFX } from '../effects/ChronoVFX.js';
@@ -22,6 +23,9 @@ export default class FoundationTestScene extends Phaser.Scene {
     const { width, height } = this.scale;
     const worldWidth = 5120; // 4 Distinct 1280px Sections (A, B, C, D)
     const groundY = 615;
+
+    // Start background music loop
+    audioManager.startMusic();
 
     // 1. Authoritative Game Run State
     this.score = 0;
@@ -489,7 +493,21 @@ export default class FoundationTestScene extends Phaser.Scene {
 
     // ESC: Return to Menu
     this.input.keyboard.on('keydown-ESC', () => {
+      audioManager.applyTemporalFilter(false);
       this.scene.start('MenuScene');
+    });
+
+    // M: Toggle Audio Mute
+    this.input.keyboard.on('keydown-M', () => {
+      const muted = audioManager.toggleMute();
+      if (this.hud && this.hud.updateAudioBadge) {
+        this.hud.updateAudioBadge(muted);
+      }
+      audioManager.play('uiClick');
+    });
+
+    this.events.on('shutdown', () => {
+      audioManager.applyTemporalFilter(false);
     });
 
     // Diagnostics overlay (~ or D)

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { audioManager } from '../systems/AudioManager.js';
 
 export class Checkpoint {
   /**
@@ -64,6 +65,7 @@ export class Checkpoint {
     }
 
     this.isActivated = true;
+    audioManager.play('checkpoint');
 
     // Visual activation feedback
     this.pylon.setAlpha(1.0);

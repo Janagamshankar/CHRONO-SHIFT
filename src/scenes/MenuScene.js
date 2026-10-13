@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { settingsManager } from '../systems/SettingsManager.js';
+import { audioManager } from '../systems/AudioManager.js';
 
 export default class MenuScene extends Phaser.Scene {
   constructor() {
@@ -8,6 +9,10 @@ export default class MenuScene extends Phaser.Scene {
 
   create() {
     const { width, height } = this.scale;
+
+    // Start background music loop upon initial user gesture
+    this.input.once('pointerdown', () => audioManager.startMusic());
+    this.input.keyboard.once('keydown', () => audioManager.startMusic());
 
     this.activeModal = null;
     this.selectedIndex = 0;
@@ -195,8 +200,11 @@ export default class MenuScene extends Phaser.Scene {
 
     container.on('pointerover', () => {
       if (this.activeModal) return;
-      this.selectedIndex = index;
-      this.updateButtonFocus();
+      if (this.selectedIndex !== index) {
+        this.selectedIndex = index;
+        this.updateButtonFocus();
+        audioManager.play('uiHover');
+      }
     });
 
     container.on('pointerdown', () => {
@@ -240,8 +248,14 @@ export default class MenuScene extends Phaser.Scene {
 
     this.input.keyboard.on('keydown-ESC', () => {
       if (this.activeModal) {
+        audioManager.play('uiClick');
         this.closeModal();
       }
+    });
+
+    this.input.keyboard.on('keydown-M', () => {
+      audioManager.toggleMute();
+      audioManager.play('uiClick');
     });
 
     this.events.on('shutdown', () => {
@@ -253,6 +267,7 @@ export default class MenuScene extends Phaser.Scene {
         this.input.keyboard.off('keydown-ENTER');
         this.input.keyboard.off('keydown-SPACE');
         this.input.keyboard.off('keydown-ESC');
+        this.input.keyboard.off('keydown-M');
       }
     });
   }
@@ -261,11 +276,13 @@ export default class MenuScene extends Phaser.Scene {
     if (this.activeModal) return;
     this.selectedIndex = (this.selectedIndex + delta + this.buttons.length) % this.buttons.length;
     this.updateButtonFocus();
+    audioManager.play('uiHover');
   }
 
   triggerButtonAction(index) {
     if (this.isActionLocked) return;
     this.isActionLocked = true;
+    audioManager.play('uiClick');
     this.time.delayedCall(180, () => {
       this.isActionLocked = false;
     });
@@ -446,6 +463,7 @@ export default class MenuScene extends Phaser.Scene {
           const next = Math.max(item.min, current - item.step);
           settingsManager.set(item.key, next);
           valText.setText(`${next}%`);
+          audioManager.play('uiClick');
           if (this.sound) {
             this.sound.volume = settingsManager.get('masterVolume') / 100;
           }
@@ -457,6 +475,7 @@ export default class MenuScene extends Phaser.Scene {
           const next = Math.min(item.max, current + item.step);
           settingsManager.set(item.key, next);
           valText.setText(`${next}%`);
+          audioManager.play('uiClick');
           if (this.sound) {
             this.sound.volume = settingsManager.get('masterVolume') / 100;
           }
@@ -495,6 +514,7 @@ export default class MenuScene extends Phaser.Scene {
           updateToggleView(nextVal);
           toggleText.setText(nextVal ? 'ON' : 'OFF');
           toggleText.setColor(nextVal ? '#050814' : '#94a3b8');
+          audioManager.play('uiClick');
         });
 
         container.add(toggleBtn);

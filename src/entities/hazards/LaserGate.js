@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { ChronoVFX } from '../../effects/ChronoVFX.js';
+import { audioManager } from '../../systems/AudioManager.js';
 
 export class LaserGate {
   /**
@@ -65,6 +66,13 @@ export class LaserGate {
     this.topEmitter.setTint(0xf59e0b);
     this.bottomEmitter.setTint(0xf59e0b);
 
+    // Hazard audio tell (proximity constrained)
+    const cam = this.scene.cameras.main;
+    const isNearby = cam && Math.abs(cam.scrollX + cam.width / 2 - this.x) < 700;
+    if (isNearby) {
+      audioManager.play('laserCharge', { duration: this.chargeMs / 1000 });
+    }
+
     this.cycleTimer = this.scene.time.delayedCall(this.chargeMs, () => {
       this.startActive();
     });
@@ -79,6 +87,13 @@ export class LaserGate {
 
     this.topEmitter.setTint(0xef4444);
     this.bottomEmitter.setTint(0xef4444);
+
+    // Hazard audio fire hum (proximity constrained)
+    const cam = this.scene.cameras.main;
+    const isNearby = cam && Math.abs(cam.scrollX + cam.width / 2 - this.x) < 700;
+    if (isNearby) {
+      audioManager.play('laserFire', { duration: this.activeMs / 1000 });
+    }
 
     // Spark burst at emitters
     for (let i = 0; i < 3; i++) {

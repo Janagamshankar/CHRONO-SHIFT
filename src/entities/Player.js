@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_SETTINGS } from '../config/gameConfig.js';
 import { ChronoVFX } from '../effects/ChronoVFX.js';
+import { audioManager } from '../systems/AudioManager.js';
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y) {
@@ -47,6 +48,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     // Landing detection: transition from airborne to grounded
     if (!this.wasGrounded && isGrounded && !this.isSliding) {
+      audioManager.play('land');
       // Squash & stretch recovery
       this.scene.tweens.add({
         targets: this,
@@ -64,6 +66,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     // 1. Sliding
     if ((keys.S.isDown || cursors.down.isDown) && isGrounded && !this.isSliding) {
+      audioManager.play('slide');
       this.startSlide();
       this.wasGrounded = isGrounded;
       return;
@@ -87,6 +90,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         if (this.footstepTimer > 180) {
           this.footstepTimer = 0;
           ChronoVFX.spawnFootstepSpark(this.scene, this.x, this.y, this.facing);
+          audioManager.play('footstep');
         }
       }
     } else if (cursors.right.isDown || keys.D.isDown) {
@@ -99,6 +103,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         if (this.footstepTimer > 180) {
           this.footstepTimer = 0;
           ChronoVFX.spawnFootstepSpark(this.scene, this.x, this.y, this.facing);
+          audioManager.play('footstep');
         }
       }
     } else {
@@ -110,6 +115,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     if ((Phaser.Input.Keyboard.JustDown(cursors.up) || Phaser.Input.Keyboard.JustDown(keys.SPACE)) && isGrounded) {
       this.setVelocityY(this.jumpVelocity);
       this.setTexture('player_avatar_jump');
+      audioManager.play('jump');
       this.scene.tweens.add({
         targets: this,
         scaleX: 0.92,
@@ -169,12 +175,16 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     const cost = GAME_SETTINGS.CHRONO.DASH_COST;
     if (this.energy < cost) {
+      audioManager.play('abilityReject');
       return { success: false, reason: 'INSUFFICIENT_ENERGY' };
     }
 
     // Deduct energy exactly once
     this.energy = Math.max(0, this.energy - cost);
     this.isDashing = true;
+
+    // Trigger distinctive dash audio sequence
+    audioManager.play('dash');
 
     // Determine dash vector
     const dirX = this.facing;
@@ -212,6 +222,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     // Restore normal run speed
     this.setVelocityX(this.facing * this.runSpeed);
 
+    // Audio cue for dash arrival/dissipation
+    audioManager.play('dashEnd');
+
     // End cue: small landing particle
     const endRing = this.scene.add.image(this.x, this.y, 'vfx_freeze_crystal').setScale(1.2).setAlpha(0.8);
     this.scene.tweens.add({
@@ -230,11 +243,15 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   activateChronoFreeze(eligibleTargets = []) {
     const cost = GAME_SETTINGS.CHRONO.FREEZE_COST;
     if (this.energy < cost) {
+      audioManager.play('abilityReject');
       return { success: false, reason: 'INSUFFICIENT_ENERGY' };
     }
 
     // Deduct energy exactly once
     this.energy = Math.max(0, this.energy - cost);
+
+    // Play freeze activation sound & engage dynamic low-pass temporal muffling
+    audioManager.play('freeze');
 
     // Spawn expanding temporal shockwave ring at player
     ChronoVFX.spawnFreezeShockwave(this.scene, this.x, this.y);
@@ -247,6 +264,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       }
     });
 
+    // Schedule audio release sound & restore normal audio spectrum
+    if (this.freezeEndTimer) this.freezeEndTimer.remove();
+    this.freezeEndTimer = this.scene.time.delayedCall(duration, () => {
+      audioManager.play('freezeRelease');
+    });
+
     return { success: true, energy: this.energy, duration };
   }
 
@@ -255,6 +278,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
    */
   rechargeEnergy(amount = GAME_SETTINGS.CHRONO.CELL_RECHARGE_AMOUNT) {
     this.energy = Math.min(GAME_SETTINGS.CHRONO.MAX_ENERGY, this.energy + amount);
+    audioManager.play('cellPickup');
     ChronoVFX.spawnEnergyCollectBurst(this.scene, this.x, this.y);
     return this.energy;
   }
@@ -280,6 +304,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.isInvulnerable = true;
 
     // Visual & audio feedback
+    audioManager.play('damage');
     ChronoVFX.spawnDamageImpact(this.scene, this.x, this.y);
 
     // Red impact tint
@@ -328,6 +353,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.setVelocity(0, 0);
     this.body.setAllowGravity(false);
     this.body.enable = false;
+
+    // Trigger audio feedback and restore temporal audio filter cleanly
+    audioManager.play('death');
+    audioManager.applyTemporalFilter(false);
 
     // Death shatter particles
     for (let i = 0; i < 12; i++) {
@@ -408,6 +437,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.clearTint();
     this.health = GAME_SETTINGS.PLAYER.MAX_HEALTH;
     this.isInvulnerable = true;
+
+    // Audio cue for respawn
+    audioManager.play('respawn');
 
     // Temporal arrival shockwave ring
     const ring = this.scene.add.image(this.x, this.y, 'vfx_shockwave_ring').setDepth(24);

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { ChronoVFX } from '../../effects/ChronoVFX.js';
+import { audioManager } from '../../systems/AudioManager.js';
 
 export class CollapsingPlatform {
   /**
@@ -45,6 +46,9 @@ export class CollapsingPlatform {
     this.state = 'TRIGGERED';
     this.warningStartTime = this.scene.time.now;
     this.remainingWarningMs = this.warningDurationMs;
+
+    // Audio cue for crumbling platform
+    audioManager.play('platformCrumble');
 
     // Visual warning: amber tint and crumble dust
     this.sprite.setTint(0xf59e0b);

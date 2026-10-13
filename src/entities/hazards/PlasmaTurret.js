@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { PlasmaProjectile } from './PlasmaProjectile.js';
 import { ChronoVFX } from '../../effects/ChronoVFX.js';
+import { audioManager } from '../../systems/AudioManager.js';
 
 export class PlasmaTurret {
   /**
@@ -81,6 +82,13 @@ export class PlasmaTurret {
     if (this.isFrozen) return;
 
     this.muzzleTell.setAlpha(0);
+
+    // Proximity constrained launch sound
+    const cam = this.scene.cameras.main;
+    const isNearby = cam && Math.abs(cam.scrollX + cam.width / 2 - this.x) < 800;
+    if (isNearby) {
+      audioManager.play('plasmaShoot');
+    }
 
     // Spawn projectile
     const proj = new PlasmaProjectile(

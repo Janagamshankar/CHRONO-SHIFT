@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { audioManager } from '../systems/AudioManager.js';
 
 export default class BriefingScene extends Phaser.Scene {
   constructor() {
@@ -73,20 +74,24 @@ export default class BriefingScene extends Phaser.Scene {
 
     // Deploy Button (Primary)
     const deployBtn = this.createButton(boxX + 160, btnY, 'DEPLOY TO AETHELON [ENTER]', 0x00f0ff, 0x050814, () => {
+      audioManager.play('uiClick');
       this.scene.start('FoundationTestScene');
     });
 
     // Return to Menu Button
     const backBtn = this.createButton(boxX - 160, btnY, 'ABORT / RETURN [ESC]', 0x1e293b, 0xe2e8f0, () => {
+      audioManager.play('uiClick');
       this.scene.start('MenuScene');
     });
 
     // Keyboard controls for briefing
     this.input.keyboard.once('keydown-ENTER', () => {
+      audioManager.play('uiClick');
       this.scene.start('FoundationTestScene');
     });
 
     this.input.keyboard.once('keydown-ESC', () => {
+      audioManager.play('uiClick');
       this.scene.start('MenuScene');
     });
   }
@@ -115,6 +120,7 @@ export default class BriefingScene extends Phaser.Scene {
     container.setInteractive({ useHandCursor: true });
 
     container.on('pointerover', () => {
+      audioManager.play('uiHover');
       container.setScale(1.04);
     });
 

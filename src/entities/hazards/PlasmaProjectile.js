@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { ChronoVFX } from '../../effects/ChronoVFX.js';
+import { audioManager } from '../../systems/AudioManager.js';
 
 export class PlasmaProjectile extends Phaser.Physics.Arcade.Sprite {
   /**
@@ -117,6 +118,7 @@ export class PlasmaProjectile extends Phaser.Physics.Arcade.Sprite {
    * Impact detonation handler
    */
   detonate() {
+    audioManager.play('plasmaExplode');
     ChronoVFX.spawnProjectileExplosion(this.scene, this.x, this.y);
     if (this.frostNode) this.frostNode.destroy();
     this.destroy();

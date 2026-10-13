@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { audioManager } from '../systems/AudioManager.js';
 
 export class ChronoCore {
   /**
@@ -99,6 +100,8 @@ export class ChronoCore {
   stabilize() {
     if (this.isStabilized) return false;
     this.isStabilized = true;
+
+    audioManager.play('coreStabilize');
 
     // Visual transformation to stable radiant matrix
     this.statusLabel.setText('[TEMPORAL MATRIX STABILIZED • 100%]');

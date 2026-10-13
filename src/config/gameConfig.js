@@ -34,29 +34,29 @@ export const GAME_SETTINGS = {
   // Mission Countdown (SPEC Section 12)
   COUNTDOWN_SECONDS: 180,
 
-  // Theme Colors
+  // Theme Colors (Light Theme per Reference: Bright Sky Blue, White, Silver, Cyan, Orange-Red Hazards)
   COLORS: {
-    PRIMARY_CYAN: 0x00f0ff,
-    ACCENT_PURPLE: 0xa855f7,
+    PRIMARY_CYAN: 0x00d8f6,
+    ACCENT_PURPLE: 0x9333ea,
     ALERT_AMBER: 0xf59e0b,
-    DANGER_RED: 0xef4444,
-    DARK_BG: 0x0a0d18,
-    SURFACE_DARK: 0x111827,
-    TEXT_LIGHT: 0xe2e8f0
+    DANGER_RED: 0xf97316,
+    SKY_BLUE: 0x7ec4fc,
+    SURFACE_WHITE: 0xf8fafc,
+    SURFACE_SILVER: 0xe2e8f0,
+    TEXT_DARK: 0x0f172a,
+    TEXT_LIGHT: 0xffffff
   }
 };
 
 export const gameConfig = {
   type: Phaser.AUTO,
   parent: 'game-container',
-  width: GAME_SETTINGS.CANVAS_WIDTH,
-  height: GAME_SETTINGS.CANVAS_HEIGHT,
-  backgroundColor: '#0a0d18',
+  backgroundColor: '#7ec4fc',
   scale: {
-    mode: Phaser.Scale.FIT,
+    mode: Phaser.Scale.RESIZE,
     autoCenter: Phaser.Scale.CENTER_BOTH,
-    width: GAME_SETTINGS.CANVAS_WIDTH,
-    height: GAME_SETTINGS.CANVAS_HEIGHT
+    width: '100%',
+    height: '100%'
   },
   physics: {
     default: 'arcade',

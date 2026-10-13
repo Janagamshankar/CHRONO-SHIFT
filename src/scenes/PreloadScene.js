@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { PlayerSpriteGenerator } from '../entities/PlayerSpriteGenerator.js';
 
 export default class PreloadScene extends Phaser.Scene {
   constructor() {
@@ -59,6 +60,9 @@ export default class PreloadScene extends Phaser.Scene {
       console.warn(`[AssetLoadWarning] Could not load optional asset: ${file.key}`);
     });
 
+    // Load high-resolution Aethelon floating city matte painting
+    this.load.image('bg_aethelon_city', 'assets/images/bg_aethelon_city.jpg');
+
     // Generate procedural fallback textures offline
     this.createProceduralTextures();
   }
@@ -93,128 +97,79 @@ export default class PreloadScene extends Phaser.Scene {
     cellGfx.generateTexture('cell_orb', 32, 32);
     cellGfx.destroy();
 
-    // 4. Enhanced Cybernetic Operative Avatar (Kael Veyron)
-    const playerGfx = this.make.graphics({ x: 0, y: 0, add: false });
-    // Outer high-contrast rim-light silhouette (for dark/bright background readability)
-    playerGfx.lineStyle(1.5, 0x00f0ff, 0.9);
-    playerGfx.strokeRoundedRect(5, 3, 22, 42, 4);
+    // 3B. Chrono Core Fragment (Collectable Narrative Objective Shard - 40x40)
+    const fragGfx = this.make.graphics({ x: 0, y: 0, add: false });
+    // Outer temporal pulse halo
+    fragGfx.fillStyle(0x00f0ff, 0.25);
+    fragGfx.fillCircle(20, 20, 18);
+    // Concentric calibration ring
+    fragGfx.lineStyle(1.5, 0x00f0ff, 0.85);
+    fragGfx.strokeCircle(20, 20, 15);
+    // Geometric Crystalline Diamond Shard
+    fragGfx.fillStyle(0x38bdf8, 0.9);
+    fragGfx.beginPath();
+    fragGfx.moveTo(20, 4);
+    fragGfx.lineTo(34, 20);
+    fragGfx.lineTo(20, 36);
+    fragGfx.lineTo(6, 20);
+    fragGfx.closePath();
+    fragGfx.fillPath();
+    // Inner facet shading
+    fragGfx.fillStyle(0xa855f7, 0.8);
+    fragGfx.beginPath();
+    fragGfx.moveTo(20, 8);
+    fragGfx.lineTo(30, 20);
+    fragGfx.lineTo(20, 32);
+    fragGfx.closePath();
+    fragGfx.fillPath();
+    // Silver beveled border
+    fragGfx.lineStyle(2, 0xffffff, 1);
+    fragGfx.beginPath();
+    fragGfx.moveTo(20, 4);
+    fragGfx.lineTo(34, 20);
+    fragGfx.lineTo(20, 36);
+    fragGfx.lineTo(6, 20);
+    fragGfx.closePath();
+    fragGfx.strokePath();
+    // Radiant core spark
+    fragGfx.fillStyle(0xffffff, 1);
+    fragGfx.fillCircle(20, 20, 3.5);
+    fragGfx.generateTexture('core_fragment', 40, 40);
+    fragGfx.destroy();
 
-    // Dark armored chassis body
-    playerGfx.fillStyle(0x0a1124, 1);
-    playerGfx.fillRoundedRect(6, 4, 20, 40, 3);
-
-    // Helmet / Visor
-    playerGfx.fillStyle(0x0f172a, 1);
-    playerGfx.fillRoundedRect(8, 5, 16, 12, 3);
-    // Glowing cyan visor with white-hot core
-    playerGfx.fillStyle(0x00f0ff, 1);
-    playerGfx.fillRoundedRect(12, 8, 12, 5, 2);
-    playerGfx.fillStyle(0xffffff, 1);
-    playerGfx.fillRect(15, 9, 8, 2);
-
-    // Torso armor plate & tech conduits
-    playerGfx.fillStyle(0x1e293b, 1);
-    playerGfx.fillRect(8, 19, 16, 15);
-    playerGfx.fillStyle(0x38bdf8, 0.85);
-    playerGfx.fillRect(10, 21, 5, 9);
-
-    // Chrono Gauntlet on arm (Glowing violet temporal anomaly core)
-    playerGfx.fillStyle(0x475569, 1);
-    playerGfx.fillRect(20, 22, 8, 10);
-    playerGfx.fillStyle(0xa855f7, 1);
-    playerGfx.fillRect(23, 24, 4, 6);
-    playerGfx.fillStyle(0xffffff, 0.9);
-    playerGfx.fillRect(24, 25, 2, 4);
-
-    // Combat Greaves / Armored boots with anti-grav micro-emitters
-    playerGfx.fillStyle(0x0f172a, 1);
-    playerGfx.fillRect(8, 35, 7, 10);
-    playerGfx.fillRect(17, 35, 7, 10);
-    // Soles
-    playerGfx.fillStyle(0x00f0ff, 0.9);
-    playerGfx.fillRect(8, 43, 7, 2);
-    playerGfx.fillRect(17, 43, 7, 2);
-
-    playerGfx.generateTexture('player_avatar', 32, 48);
-    playerGfx.destroy();
-
-    // 4B. Airborne / Jumping Avatar Pose
-    const jumpGfx = this.make.graphics({ x: 0, y: 0, add: false });
-    jumpGfx.lineStyle(1.5, 0x00f0ff, 0.9);
-    jumpGfx.strokeRoundedRect(5, 3, 22, 42, 4);
-    jumpGfx.fillStyle(0x0a1124, 1);
-    jumpGfx.fillRoundedRect(6, 4, 20, 40, 3);
-    // Visor looking up/forward
-    jumpGfx.fillStyle(0x00f0ff, 1);
-    jumpGfx.fillRoundedRect(12, 7, 12, 5, 2);
-    jumpGfx.fillStyle(0xffffff, 1);
-    jumpGfx.fillRect(15, 8, 8, 2);
-    // Tucked legs
-    jumpGfx.fillStyle(0x1e293b, 1);
-    jumpGfx.fillRect(8, 19, 16, 14);
-    jumpGfx.fillStyle(0xa855f7, 1);
-    jumpGfx.fillRect(22, 21, 6, 8);
-    jumpGfx.fillStyle(0x0f172a, 1);
-    jumpGfx.fillRect(8, 33, 7, 8);
-    jumpGfx.fillRect(17, 33, 7, 8);
-    // Thruster glow underneath boots
-    jumpGfx.fillStyle(0x00f0ff, 1);
-    jumpGfx.fillCircle(11, 44, 3);
-    jumpGfx.fillCircle(20, 44, 3);
-    jumpGfx.generateTexture('player_avatar_jump', 32, 48);
-    jumpGfx.destroy();
-
-    // 4C. Low-Profile Slide Avatar Pose (32x28)
-    const slideGfx = this.make.graphics({ x: 0, y: 0, add: false });
-    slideGfx.lineStyle(1.5, 0x00f0ff, 0.9);
-    slideGfx.strokeRoundedRect(3, 4, 26, 22, 4);
-    slideGfx.fillStyle(0x0a1124, 1);
-    slideGfx.fillRoundedRect(4, 5, 24, 20, 3);
-    // Low visor
-    slideGfx.fillStyle(0x00f0ff, 1);
-    slideGfx.fillRect(16, 8, 10, 4);
-    slideGfx.fillStyle(0xffffff, 1);
-    slideGfx.fillRect(18, 9, 6, 2);
-    // Horizontal torso
-    slideGfx.fillStyle(0x1e293b, 1);
-    slideGfx.fillRect(6, 12, 20, 8);
-    slideGfx.fillStyle(0xa855f7, 1);
-    slideGfx.fillRect(8, 14, 5, 5);
-    // Sliding rear friction sparks
-    slideGfx.fillStyle(0x00f0ff, 0.9);
-    slideGfx.fillRect(2, 22, 26, 3);
-    slideGfx.generateTexture('player_avatar_slide', 32, 28);
-    slideGfx.destroy();
+    // 4. White & Silver Armored Runner Avatar Suite (Kael Veyron - Reference Recreation)
+    // Generates 6-frame run cycle, idle, jump, fall, slide, and dash animations
+    PlayerSpriteGenerator.generateAll(this);
 
     // 5. Rotating Geometric Hazard (Triangular Blade)
     const hazardGfx = this.make.graphics({ x: 0, y: 0, add: false });
-    hazardGfx.fillStyle(0xf59e0b, 1);
+    hazardGfx.fillStyle(0xf97316, 1);
     hazardGfx.beginPath();
     hazardGfx.moveTo(24, 2);
     hazardGfx.lineTo(44, 42);
     hazardGfx.lineTo(4, 42);
     hazardGfx.closePath();
     hazardGfx.fillPath();
-    // Inner pulse core
     hazardGfx.fillStyle(0xef4444, 1);
     hazardGfx.fillCircle(24, 28, 6);
+    hazardGfx.fillStyle(0xffffff, 1);
+    hazardGfx.fillCircle(24, 28, 2.5);
     hazardGfx.generateTexture('hazard_triangle', 48, 48);
     hazardGfx.destroy();
 
-    // 6. Grid Platform Tile
+    // 6. Grid Platform Tile (Light Theme)
     const platformGfx = this.make.graphics({ x: 0, y: 0, add: false });
-    platformGfx.fillStyle(0x0f172a, 1);
+    platformGfx.fillStyle(0xffffff, 1);
     platformGfx.fillRect(0, 0, 64, 32);
     platformGfx.fillStyle(0x00f0ff, 1);
     platformGfx.fillRect(0, 0, 64, 3);
-    platformGfx.lineStyle(1, 0x1e293b, 0.7);
+    platformGfx.lineStyle(1, 0xcbd5e1, 0.9);
     platformGfx.strokeRect(0, 3, 64, 29);
     platformGfx.generateTexture('grid_platform', 64, 32);
     platformGfx.destroy();
 
-    // 7. Distant Skyline Layer (Seamless parallax width 1280, height 400)
+    // 7. Distant White Spires & Architectural Skyline (1280x400)
     const skyGfx = this.make.graphics({ x: 0, y: 0, add: false });
-    // Dark silhouette skyscrapers of Aethelon City
     const buildings = [
       { x: 0, w: 90, h: 260 },
       { x: 90, w: 60, h: 320, spire: true },
@@ -232,32 +187,31 @@ export default class PreloadScene extends Phaser.Scene {
     ];
 
     buildings.forEach(b => {
-      // Building silhouette
-      skyGfx.fillStyle(0x0a1226, 0.95);
+      // White & pale silver distant tower silhouette
+      skyGfx.fillStyle(0xffffff, 0.55);
       skyGfx.fillRect(b.x, 400 - b.h, b.w, b.h);
+      skyGfx.fillStyle(0xe0f2fe, 0.65);
+      skyGfx.fillRect(b.x + 8, 400 - b.h + 8, b.w - 16, b.h - 8);
 
-      // Spire beacon
       if (b.spire) {
-        skyGfx.lineStyle(2, 0x00f0ff, 0.8);
-        skyGfx.lineBetween(b.x + b.w / 2, 400 - b.h, b.x + b.w / 2, 400 - b.h - 30);
+        skyGfx.lineStyle(2, 0x00f0ff, 0.85);
+        skyGfx.lineBetween(b.x + b.w / 2, 400 - b.h, b.x + b.w / 2, 400 - b.h - 35);
         skyGfx.fillStyle(0x00f0ff, 1);
-        skyGfx.fillCircle(b.x + b.w / 2, 400 - b.h - 30, 2.5);
+        skyGfx.fillCircle(b.x + b.w / 2, 400 - b.h - 35, 3);
       }
 
-      // Small glowing windows / energy strips
-      skyGfx.fillStyle(0x1e3a8a, 0.6);
-      for (let wy = 400 - b.h + 20; wy < 380; wy += 28) {
-        for (let wx = b.x + 10; wx < b.x + b.w - 12; wx += 18) {
-          if ((wx + wy) % 5 === 0) {
-            skyGfx.fillRect(wx, wy, 6, 12);
-          }
+      // Cyan architectural light conduits
+      skyGfx.fillStyle(0x00f0ff, 0.5);
+      for (let wy = 400 - b.h + 20; wy < 380; wy += 36) {
+        for (let wx = b.x + 12; wx < b.x + b.w - 16; wx += 22) {
+          skyGfx.fillRect(wx, wy, 4, 16);
         }
       }
     });
     skyGfx.generateTexture('bg_distant_skyline', 1280, 400);
     skyGfx.destroy();
 
-    // 8. Midground Architecture Layer (Width 1280, height 450)
+    // 8. Midground Floating White Arch & Towers Layer (1280x450)
     const midGfx = this.make.graphics({ x: 0, y: 0, add: false });
     const midStructures = [
       { x: 0, w: 140, h: 200 },
@@ -270,54 +224,56 @@ export default class PreloadScene extends Phaser.Scene {
     ];
 
     midStructures.forEach(s => {
-      midGfx.fillStyle(0x0f1c3f, 0.9);
+      // White & pale silver architecture
+      midGfx.fillStyle(0xffffff, 0.7);
       midGfx.fillRect(s.x, 450 - s.h, s.w, s.h);
-      // Top edge highlight
-      midGfx.lineStyle(1.5, 0x38bdf8, 0.7);
+      midGfx.fillStyle(0xf1f5f9, 0.8);
+      midGfx.fillRect(s.x + 6, 450 - s.h + 6, s.w - 12, s.h - 6);
+      midGfx.lineStyle(1.5, 0x38bdf8, 0.75);
       midGfx.strokeRect(s.x, 450 - s.h, s.w, s.h);
 
       if (s.rail) {
         // Glowing cyan energy conduit
-        midGfx.lineStyle(3, 0x00f0ff, 0.85);
-        midGfx.lineBetween(s.x, 450 - s.h + 40, s.x + s.w, 450 - s.h + 40);
-        // Violet temporal fracture conduit
-        midGfx.lineStyle(2, 0xa855f7, 0.85);
-        midGfx.lineBetween(s.x + 15, 450 - s.h + 80, s.x + s.w - 15, 450 - s.h + 80);
+        midGfx.lineStyle(3, 0x00f0ff, 0.9);
+        midGfx.lineBetween(s.x, 450 - s.h + 30, s.x + s.w, 450 - s.h + 30);
       }
     });
     // Skyway overpass bridge
-    midGfx.lineStyle(4, 0x00f0ff, 0.4);
+    midGfx.lineStyle(3, 0x00f0ff, 0.6);
     midGfx.lineBetween(0, 360, 1280, 360);
     midGfx.generateTexture('bg_midground_city', 1280, 450);
     midGfx.destroy();
 
-    // 9. Foreground Structural Overlay (Framing girders & columns)
+    // 9. Foreground Framing Architectural Column (Right Edge Pylon matching reference - 140x720)
     const foreGfx = this.make.graphics({ x: 0, y: 0, add: false });
-    // Left column
-    foreGfx.fillStyle(0x050814, 0.85);
-    foreGfx.fillRect(0, 0, 60, 720);
-    foreGfx.lineStyle(2, 0x00f0ff, 0.4);
-    foreGfx.lineBetween(60, 0, 60, 720);
-
-    // Right column
-    foreGfx.fillStyle(0x050814, 0.85);
-    foreGfx.fillRect(1220, 0, 60, 720);
-    foreGfx.lineStyle(2, 0x00f0ff, 0.4);
-    foreGfx.lineBetween(1220, 0, 1220, 720);
-
-    // Top beam with hazard markings
-    foreGfx.fillStyle(0x070c1b, 0.9);
-    foreGfx.fillRect(60, 0, 1160, 24);
-    foreGfx.lineStyle(1.5, 0xa855f7, 0.5);
-    foreGfx.lineBetween(60, 24, 1220, 24);
-
-    foreGfx.generateTexture('bg_foreground_structures', 1280, 720);
+    // White column body
+    foreGfx.fillStyle(0xffffff, 0.95);
+    foreGfx.fillRect(20, 0, 120, 720);
+    foreGfx.fillStyle(0xf1f5f9, 1);
+    foreGfx.fillRect(35, 0, 90, 720);
+    foreGfx.lineStyle(2, 0xcbd5e1, 0.9);
+    foreGfx.lineBetween(20, 0, 20, 720);
+    // Glowing cyan vertical energy conduits
+    foreGfx.lineStyle(3, 0x00f0ff, 0.95);
+    foreGfx.lineBetween(30, 0, 30, 720);
+    foreGfx.lineStyle(1.5, 0xffffff, 0.9);
+    foreGfx.lineBetween(30, 0, 30, 720);
+    foreGfx.lineStyle(2, 0x00f0ff, 0.8);
+    foreGfx.lineBetween(110, 0, 110, 720);
+    // Observation balconies & tech notches
+    for (let by = 80; by < 700; by += 160) {
+      foreGfx.fillStyle(0xe2e8f0, 1);
+      foreGfx.fillRoundedRect(0, by, 40, 18, 4);
+      foreGfx.fillStyle(0x00f0ff, 1);
+      foreGfx.fillRect(4, by + 14, 32, 2.5);
+    }
+    foreGfx.generateTexture('bg_right_tower', 140, 720);
     foreGfx.destroy();
 
     // 10. Geometric Shard (Floating temporal crystal)
     const shardGfx = this.make.graphics({ x: 0, y: 0, add: false });
-    shardGfx.lineStyle(2, 0x00f0ff, 0.9);
-    shardGfx.fillStyle(0xa855f7, 0.4);
+    shardGfx.lineStyle(2, 0x00f0ff, 0.95);
+    shardGfx.fillStyle(0xe0f2fe, 0.6);
     shardGfx.beginPath();
     shardGfx.moveTo(20, 4);
     shardGfx.lineTo(36, 20);
@@ -326,28 +282,28 @@ export default class PreloadScene extends Phaser.Scene {
     shardGfx.closePath();
     shardGfx.fillPath();
     shardGfx.strokePath();
-    shardGfx.fillStyle(0xffffff, 0.9);
+    shardGfx.fillStyle(0xffffff, 1);
     shardGfx.fillCircle(20, 20, 3);
     shardGfx.generateTexture('geometric_shard', 40, 40);
     shardGfx.destroy();
 
-    // 11. Atmospheric Sky Gradient (1280x720)
+    // 11. Bright Cinematic Daylight Sky Gradient (1280x720)
     const skyGrad = this.make.graphics({ x: 0, y: 0, add: false });
-    // Layered gradient fill simulating atmospheric depth
     for (let y = 0; y < 720; y += 4) {
       const ratio = y / 720;
-      // Interpolate from deep cosmic navy (0x02040a) -> indigo (0x081026) -> temporal horizon haze (0x121e42)
       let r, g, b;
-      if (ratio < 0.5) {
-        const t = ratio * 2;
-        r = Math.floor(2 + (8 - 2) * t);
-        g = Math.floor(4 + (16 - 4) * t);
-        b = Math.floor(10 + (38 - 10) * t);
+      if (ratio < 0.45) {
+        // Top azure sky (0x4ba3e3) -> Clear sky blue (0x93c5fd)
+        const t = ratio / 0.45;
+        r = Math.floor(75 + (147 - 75) * t);
+        g = Math.floor(163 + (197 - 163) * t);
+        b = Math.floor(227 + (253 - 227) * t);
       } else {
-        const t = (ratio - 0.5) * 2;
-        r = Math.floor(8 + (18 - 8) * t);
-        g = Math.floor(16 + (30 - 16) * t);
-        b = Math.floor(38 + (66 - 38) * t);
+        // Clear sky blue (0x93c5fd) -> Horizon cloud haze (0xf0f9ff / 0xffffff)
+        const t = (ratio - 0.45) / 0.55;
+        r = Math.floor(147 + (245 - 147) * t);
+        g = Math.floor(197 + (250 - 197) * t);
+        b = Math.floor(253 + (255 - 253) * t);
       }
       const col = (r << 16) | (g << 8) | b;
       skyGrad.fillStyle(col, 1);
@@ -356,72 +312,228 @@ export default class PreloadScene extends Phaser.Scene {
     skyGrad.generateTexture('bg_sky_gradient', 1280, 720);
     skyGrad.destroy();
 
-    // 12. Drifting Volumetric Cloud Deck (1280x240 seamless tile)
+    // 12. Volumetric White Cumulus Cloud Deck (1280x280 seamless tile)
     const cloudGfx = this.make.graphics({ x: 0, y: 0, add: false });
-    // Base cloud mist
-    cloudGfx.fillStyle(0x0a142e, 0.6);
-    cloudGfx.fillRect(0, 80, 1280, 160);
+    // Soft base cloud mist
+    cloudGfx.fillStyle(0xe0f2fe, 0.7);
+    cloudGfx.fillRect(0, 100, 1280, 180);
 
-    // Cloud puffs along the horizon
     const cloudLobes = [
-      { x: 60, y: 120, r: 60 }, { x: 140, y: 100, r: 75 }, { x: 220, y: 110, r: 65 },
-      { x: 340, y: 130, r: 70 }, { x: 420, y: 95, r: 85 }, { x: 520, y: 115, r: 60 },
-      { x: 640, y: 125, r: 75 }, { x: 740, y: 105, r: 80 }, { x: 840, y: 120, r: 65 },
-      { x: 960, y: 130, r: 70 }, { x: 1060, y: 100, r: 85 }, { x: 1160, y: 115, r: 75 },
-      { x: 1240, y: 120, r: 65 }
+      { x: 50, y: 130, r: 65 }, { x: 130, y: 110, r: 80 }, { x: 210, y: 120, r: 70 },
+      { x: 330, y: 140, r: 75 }, { x: 410, y: 100, r: 90 }, { x: 510, y: 120, r: 65 },
+      { x: 630, y: 130, r: 80 }, { x: 730, y: 110, r: 85 }, { x: 830, y: 125, r: 70 },
+      { x: 950, y: 135, r: 75 }, { x: 1050, y: 105, r: 90 }, { x: 1150, y: 120, r: 80 },
+      { x: 1240, y: 125, r: 70 }
     ];
 
     cloudLobes.forEach(c => {
-      // Darker base
-      cloudGfx.fillStyle(0x0e1a38, 0.7);
+      // Soft ambient blue shadow base
+      cloudGfx.fillStyle(0xbfdbfe, 0.55);
+      cloudGfx.fillCircle(c.x, c.y + 10, c.r * 1.05);
+      // Bright white cloud body
+      cloudGfx.fillStyle(0xf8fafc, 0.9);
       cloudGfx.fillCircle(c.x, c.y, c.r);
-      // Soft illuminated highlight edge
-      cloudGfx.fillStyle(0x1e3a6a, 0.35);
-      cloudGfx.fillCircle(c.x, c.y - 12, c.r * 0.85);
-      cloudGfx.fillStyle(0x38bdf8, 0.12);
-      cloudGfx.fillCircle(c.x, c.y - 20, c.r * 0.6);
+      // Pure white sunlit highlight
+      cloudGfx.fillStyle(0xffffff, 1);
+      cloudGfx.fillCircle(c.x - 4, c.y - 12, c.r * 0.85);
+      cloudGfx.fillCircle(c.x - 8, c.y - 20, c.r * 0.6);
     });
-    cloudGfx.generateTexture('cloud_bank_layer', 1280, 240);
+    cloudGfx.generateTexture('cloud_bank_layer', 1280, 280);
     cloudGfx.destroy();
 
-    // 13. High-Tech Suspended Platform Tile (64x44)
+    // 13. White & Silver High-Tech Platform Deck Tile (64x44)
     const platGfx = this.make.graphics({ x: 0, y: 0, add: false });
-    // Composite platform chassis
-    platGfx.fillStyle(0x0c1322, 1);
+    // White metallic landing surface
+    platGfx.fillStyle(0xffffff, 1);
     platGfx.fillRect(0, 4, 64, 40);
-
-    // Bevel side borders
-    platGfx.lineStyle(1, 0x1e293b, 0.9);
+    // Silver beveled trim
+    platGfx.fillStyle(0xf1f5f9, 1);
+    platGfx.fillRect(0, 8, 64, 32);
+    platGfx.lineStyle(1, 0xcbd5e1, 0.9);
     platGfx.strokeRect(0, 4, 64, 40);
 
-    // Structural vents / tech trusses
-    platGfx.fillStyle(0x060911, 1);
-    platGfx.fillRect(8, 14, 20, 14);
-    platGfx.fillRect(36, 14, 20, 14);
-    platGfx.lineStyle(1, 0x1e3a8a, 0.5);
-    platGfx.strokeRect(8, 14, 20, 14);
-    platGfx.strokeRect(36, 14, 20, 14);
+    // Beveled vents / silver panel seams
+    platGfx.fillStyle(0xe2e8f0, 1);
+    platGfx.fillRect(8, 16, 20, 14);
+    platGfx.fillRect(36, 16, 20, 14);
+    platGfx.lineStyle(1, 0x94a3b8, 0.6);
+    platGfx.strokeRect(8, 16, 20, 14);
+    platGfx.strokeRect(36, 16, 20, 14);
 
-    // Status micro-LED conduits
-    platGfx.fillStyle(0x00f0ff, 0.9);
-    platGfx.fillRect(10, 34, 4, 3);
-    platGfx.fillRect(18, 34, 4, 3);
-    platGfx.fillStyle(0xa855f7, 0.9);
-    platGfx.fillRect(38, 34, 4, 3);
-    platGfx.fillRect(46, 34, 4, 3);
+    // Cyan status LED conduits
+    platGfx.fillStyle(0x00f0ff, 1);
+    platGfx.fillRect(10, 36, 4, 3);
+    platGfx.fillRect(18, 36, 4, 3);
+    platGfx.fillRect(38, 36, 4, 3);
+    platGfx.fillRect(46, 36, 4, 3);
 
-    // Luminous Energy Rail on top surface (4px dual-beam)
+    // Luminous electric cyan rail on top landing deck
     platGfx.fillStyle(0x00f0ff, 1);
     platGfx.fillRect(0, 0, 64, 4);
-    platGfx.fillStyle(0xffffff, 0.8);
+    platGfx.fillStyle(0xffffff, 0.95);
     platGfx.fillRect(0, 1, 64, 1.5);
 
-    // Underside anti-gravity emitter node
-    platGfx.fillStyle(0x00f0ff, 0.7);
+    // Underside anti-gravity node
+    platGfx.fillStyle(0x00f0ff, 0.8);
     platGfx.fillRect(26, 40, 12, 4);
 
     platGfx.generateTexture('platform_tech_tile', 64, 44);
     platGfx.destroy();
+
+    // 13B. Architectural Column Bracket Support (Underneath Platforms - Reference Recreation)
+    // 240 width, 260 height: Flared bracket arms, central glowing cyan crest, twin fluted columns
+    const bracketGfx = this.make.graphics({ x: 0, y: 0, add: false });
+    // Flared bracket arms reaching left and right
+    bracketGfx.fillStyle(0xffffff, 1);
+    bracketGfx.beginPath();
+    bracketGfx.moveTo(10, 0);
+    bracketGfx.lineTo(230, 0);
+    bracketGfx.lineTo(190, 48);
+    bracketGfx.lineTo(145, 60);
+    bracketGfx.lineTo(145, 260);
+    bracketGfx.lineTo(95, 260);
+    bracketGfx.lineTo(95, 60);
+    bracketGfx.lineTo(50, 48);
+    bracketGfx.closePath();
+    bracketGfx.fillPath();
+
+    // Silver beveled panel shading on brackets
+    bracketGfx.fillStyle(0xe2e8f0, 1);
+    bracketGfx.beginPath();
+    bracketGfx.moveTo(25, 6);
+    bracketGfx.lineTo(90, 6);
+    bracketGfx.lineTo(80, 42);
+    bracketGfx.lineTo(55, 38);
+    bracketGfx.closePath();
+    bracketGfx.fillPath();
+
+    bracketGfx.beginPath();
+    bracketGfx.moveTo(215, 6);
+    bracketGfx.lineTo(150, 6);
+    bracketGfx.lineTo(160, 42);
+    bracketGfx.lineTo(185, 38);
+    bracketGfx.closePath();
+    bracketGfx.fillPath();
+
+    // Diagonal bracket bevel lines
+    bracketGfx.lineStyle(2, 0xcbd5e1, 0.95);
+    bracketGfx.lineBetween(10, 0, 50, 48);
+    bracketGfx.lineBetween(230, 0, 190, 48);
+    bracketGfx.lineBetween(50, 48, 95, 60);
+    bracketGfx.lineBetween(190, 48, 145, 60);
+
+    // Twin Fluted Columns with Recessed Cyan Conduits
+    bracketGfx.fillStyle(0xf1f5f9, 1);
+    bracketGfx.fillRect(98, 62, 44, 198);
+    bracketGfx.lineStyle(1.5, 0x94a3b8, 0.8);
+    bracketGfx.strokeRect(98, 62, 44, 198);
+
+    // Vertical glowing cyan energy conduit in column center
+    bracketGfx.fillStyle(0x00f0ff, 1);
+    bracketGfx.fillRect(116, 68, 8, 186);
+    bracketGfx.fillStyle(0xffffff, 0.9);
+    bracketGfx.fillRect(118, 70, 4, 182);
+
+    // Central Embossed Diamond Crest (matching reference)
+    bracketGfx.fillStyle(0xffffff, 1);
+    bracketGfx.beginPath();
+    bracketGfx.moveTo(120, 24);
+    bracketGfx.lineTo(142, 48);
+    bracketGfx.lineTo(120, 72);
+    bracketGfx.lineTo(98, 48);
+    bracketGfx.closePath();
+    bracketGfx.fillPath();
+    bracketGfx.lineStyle(2, 0xcbd5e1, 1);
+    bracketGfx.strokePath();
+
+    // Glowing Cyan Core Diamond
+    bracketGfx.fillStyle(0x00f0ff, 1);
+    bracketGfx.beginPath();
+    bracketGfx.moveTo(120, 32);
+    bracketGfx.lineTo(134, 48);
+    bracketGfx.lineTo(120, 64);
+    bracketGfx.lineTo(106, 48);
+    bracketGfx.closePath();
+    bracketGfx.fillPath();
+    bracketGfx.fillStyle(0xffffff, 1);
+    bracketGfx.fillCircle(120, 48, 3.5);
+
+    bracketGfx.generateTexture('platform_pillar_bracket', 240, 260);
+    bracketGfx.destroy();
+
+    // 13C. Compact Floating Island Platform (160x70 - Right Platform in Reference)
+    const smallPlatGfx = this.make.graphics({ x: 0, y: 0, add: false });
+    // White top deck
+    smallPlatGfx.fillStyle(0xffffff, 1);
+    smallPlatGfx.fillRoundedRect(0, 4, 160, 24, 3);
+    smallPlatGfx.lineStyle(1, 0xcbd5e1, 1);
+    smallPlatGfx.strokeRoundedRect(0, 4, 160, 24, 3);
+    // Cyan top rail
+    smallPlatGfx.fillStyle(0x00f0ff, 1);
+    smallPlatGfx.fillRect(2, 0, 156, 4);
+    smallPlatGfx.fillStyle(0xffffff, 0.9);
+    smallPlatGfx.fillRect(2, 1, 156, 1.5);
+    // Inverted trapezoid silver base
+    smallPlatGfx.fillStyle(0xf1f5f9, 1);
+    smallPlatGfx.beginPath();
+    smallPlatGfx.moveTo(25, 28);
+    smallPlatGfx.lineTo(135, 28);
+    smallPlatGfx.lineTo(105, 65);
+    smallPlatGfx.lineTo(55, 65);
+    smallPlatGfx.closePath();
+    smallPlatGfx.fillPath();
+    smallPlatGfx.lineStyle(1.5, 0x94a3b8, 0.9);
+    smallPlatGfx.strokePath();
+    // Cyan glowing triangle/diamond in base
+    smallPlatGfx.fillStyle(0x00f0ff, 1);
+    smallPlatGfx.beginPath();
+    smallPlatGfx.moveTo(80, 34);
+    smallPlatGfx.lineTo(96, 54);
+    smallPlatGfx.lineTo(64, 54);
+    smallPlatGfx.closePath();
+    smallPlatGfx.fillPath();
+    smallPlatGfx.fillStyle(0xffffff, 1);
+    smallPlatGfx.fillCircle(80, 48, 2.5);
+
+    smallPlatGfx.generateTexture('platform_floating_small', 160, 70);
+    smallPlatGfx.destroy();
+
+    // 13D. Floating Temporal Energy Orb (64x64 - Reference Recreation)
+    const orbGfx = this.make.graphics({ x: 0, y: 0, add: false });
+    // Outer luminous cyan halo
+    orbGfx.fillStyle(0x00f0ff, 0.25);
+    orbGfx.fillCircle(32, 32, 28);
+    orbGfx.fillStyle(0x00f0ff, 0.45);
+    orbGfx.fillCircle(32, 32, 22);
+
+    // Outer concentric ring
+    orbGfx.lineStyle(2, 0x00f0ff, 0.95);
+    orbGfx.strokeCircle(32, 32, 20);
+
+    // Inner concentric ring
+    orbGfx.lineStyle(1.5, 0x38bdf8, 0.85);
+    orbGfx.strokeCircle(32, 32, 14);
+
+    // 4 Cardinal bracket notches with technical nodes
+    orbGfx.fillStyle(0x00f0ff, 1);
+    orbGfx.fillCircle(32, 12, 3);
+    orbGfx.fillCircle(32, 52, 3);
+    orbGfx.fillCircle(12, 32, 3);
+    orbGfx.fillCircle(52, 32, 3);
+    orbGfx.fillStyle(0xffffff, 1);
+    orbGfx.fillCircle(32, 12, 1.5);
+    orbGfx.fillCircle(32, 52, 1.5);
+    orbGfx.fillCircle(12, 32, 1.5);
+    orbGfx.fillCircle(52, 32, 1.5);
+
+    // Radiant glowing cyan energy core
+    orbGfx.fillStyle(0x00f0ff, 1);
+    orbGfx.fillCircle(32, 32, 9);
+    orbGfx.fillStyle(0xffffff, 1);
+    orbGfx.fillCircle(32, 32, 4.5);
+
+    orbGfx.generateTexture('temporal_orb', 64, 64);
+    orbGfx.destroy();
 
     // 14. Anti-gravity Downward Glow Flare
     const agGfx = this.make.graphics({ x: 0, y: 0, add: false });
@@ -446,19 +558,39 @@ export default class PreloadScene extends Phaser.Scene {
     shockGfx.generateTexture('vfx_shockwave_ring', 128, 128);
     shockGfx.destroy();
 
-    // 16. Dash Tapered Streak (48x12)
+    // 16. Dash Tapered Streak (60x14)
     const dashGfx = this.make.graphics({ x: 0, y: 0, add: false });
-    dashGfx.fillStyle(0x00f0ff, 0.9);
+    dashGfx.fillStyle(0x00f0ff, 0.95);
     dashGfx.beginPath();
-    dashGfx.moveTo(0, 6);
-    dashGfx.lineTo(48, 1);
-    dashGfx.lineTo(48, 11);
+    dashGfx.moveTo(0, 7);
+    dashGfx.lineTo(60, 1);
+    dashGfx.lineTo(60, 13);
     dashGfx.closePath();
     dashGfx.fillPath();
     dashGfx.fillStyle(0xffffff, 1);
-    dashGfx.fillRect(24, 4, 24, 4);
-    dashGfx.generateTexture('vfx_dash_streak', 48, 12);
+    dashGfx.fillRect(28, 5, 32, 4);
+    dashGfx.generateTexture('vfx_dash_streak', 60, 14);
     dashGfx.destroy();
+
+    // 16B. Aerodynamic Chrono Dash Cone Shockwave (80x50)
+    const coneGfx = this.make.graphics({ x: 0, y: 0, add: false });
+    coneGfx.fillStyle(0x00f0ff, 0.35);
+    coneGfx.beginPath();
+    coneGfx.moveTo(80, 25);
+    coneGfx.lineTo(0, 0);
+    coneGfx.lineTo(16, 25);
+    coneGfx.lineTo(0, 50);
+    coneGfx.closePath();
+    coneGfx.fillPath();
+    // Inner white-hot speed lines
+    coneGfx.lineStyle(2, 0xffffff, 0.9);
+    coneGfx.lineBetween(70, 25, 10, 10);
+    coneGfx.lineBetween(70, 25, 10, 40);
+    coneGfx.lineStyle(1.5, 0x00f0ff, 0.8);
+    coneGfx.lineBetween(60, 25, 15, 18);
+    coneGfx.lineBetween(60, 25, 15, 32);
+    coneGfx.generateTexture('vfx_dash_cone', 80, 50);
+    coneGfx.destroy();
 
     // 17. Freeze Frost Crystal (16x16)
     const frostGfx = this.make.graphics({ x: 0, y: 0, add: false });
@@ -473,35 +605,37 @@ export default class PreloadScene extends Phaser.Scene {
     const projGfx = this.make.graphics({ x: 0, y: 0, add: false });
     projGfx.fillStyle(0xef4444, 0.4);
     projGfx.fillCircle(14, 14, 14);
-    projGfx.fillStyle(0xf59e0b, 0.8);
+    projGfx.fillStyle(0xf97316, 0.85);
     projGfx.fillCircle(14, 14, 9);
     projGfx.fillStyle(0xffffff, 1);
     projGfx.fillCircle(14, 14, 4);
     projGfx.generateTexture('hazard_projectile', 28, 28);
     projGfx.destroy();
 
-    // 19. Moving Platform Tile (96x28)
+    // 19. Moving Platform Tile (96x28 - White/Silver Light Theme)
     const movPlatGfx = this.make.graphics({ x: 0, y: 0, add: false });
-    movPlatGfx.fillStyle(0x111c38, 1);
+    movPlatGfx.fillStyle(0xffffff, 1);
     movPlatGfx.fillRoundedRect(0, 0, 96, 28, 4);
-    movPlatGfx.lineStyle(1.5, 0x00f0ff, 0.8);
+    movPlatGfx.lineStyle(1.5, 0x00f0ff, 0.9);
     movPlatGfx.strokeRoundedRect(0, 0, 96, 28, 4);
     movPlatGfx.fillStyle(0x00f0ff, 1);
     movPlatGfx.fillRect(4, 2, 88, 3);
+    movPlatGfx.fillStyle(0xe2e8f0, 1);
+    movPlatGfx.fillRect(6, 8, 84, 16);
     movPlatGfx.generateTexture('moving_platform_tile', 96, 28);
     movPlatGfx.destroy();
 
     // 20. Collapsing Platform Tile (96x28 with amber warning markers)
     const colPlatGfx = this.make.graphics({ x: 0, y: 0, add: false });
-    colPlatGfx.fillStyle(0x171626, 1);
+    colPlatGfx.fillStyle(0xffffff, 1);
     colPlatGfx.fillRoundedRect(0, 0, 96, 28, 4);
     colPlatGfx.lineStyle(1.5, 0xf59e0b, 0.9);
     colPlatGfx.strokeRoundedRect(0, 0, 96, 28, 4);
     // Amber top rail
     colPlatGfx.fillStyle(0xf59e0b, 1);
     colPlatGfx.fillRect(4, 2, 88, 3);
-    // Honeycomb/hazard hash marks
-    colPlatGfx.fillStyle(0xef4444, 0.8);
+    // Hazard hash marks
+    colPlatGfx.fillStyle(0xef4444, 0.85);
     for (let hx = 12; hx < 88; hx += 16) {
       colPlatGfx.fillTriangle(hx, 10, hx + 8, 10, hx + 4, 18);
     }
@@ -511,7 +645,7 @@ export default class PreloadScene extends Phaser.Scene {
     // 21. Rotating Blade (64x64 Quad Energy Turbine)
     const bladeGfx = this.make.graphics({ x: 0, y: 0, add: false });
     // 4 angular turbine blades
-    bladeGfx.fillStyle(0xf59e0b, 0.9);
+    bladeGfx.fillStyle(0xf97316, 0.9);
     bladeGfx.lineStyle(1.5, 0xef4444, 1);
     for (let b = 0; b < 4; b++) {
       const angle = (b * Math.PI) / 2;
@@ -532,39 +666,80 @@ export default class PreloadScene extends Phaser.Scene {
       bladeGfx.fillPath();
       bladeGfx.strokePath();
     }
-    // Outer blade tip glow dots
     bladeGfx.fillStyle(0xffffff, 1);
     bladeGfx.fillCircle(32, 6, 2.5);
     bladeGfx.fillCircle(32, 58, 2.5);
     bladeGfx.fillCircle(6, 32, 2.5);
     bladeGfx.fillCircle(58, 32, 2.5);
-    // Central metallic hub
-    bladeGfx.fillStyle(0x0f172a, 1);
+    // Central metallic hub (White & Silver)
+    bladeGfx.fillStyle(0xffffff, 1);
     bladeGfx.fillCircle(32, 32, 10);
-    bladeGfx.lineStyle(2, 0xef4444, 0.9);
+    bladeGfx.lineStyle(2, 0xef4444, 0.95);
     bladeGfx.strokeCircle(32, 32, 10);
     bladeGfx.fillStyle(0xef4444, 1);
     bladeGfx.fillCircle(32, 32, 4);
     bladeGfx.generateTexture('hazard_blade_quad', 64, 64);
     bladeGfx.destroy();
 
-    // 22. Laser Emitter Cap (32x20)
+    // 22. Laser Emitter Cap (White & Silver with orange warning aperture)
     const emitGfx = this.make.graphics({ x: 0, y: 0, add: false });
-    emitGfx.fillStyle(0x0f172a, 1);
-    emitGfx.fillRoundedRect(0, 0, 32, 20, 3);
-    emitGfx.lineStyle(1.5, 0xef4444, 0.9);
-    emitGfx.strokeRoundedRect(0, 0, 32, 20, 3);
-    // Emitter aperture lens
-    emitGfx.fillStyle(0xef4444, 0.6);
-    emitGfx.fillCircle(16, 10, 6);
     emitGfx.fillStyle(0xffffff, 1);
-    emitGfx.fillCircle(16, 10, 2.5);
-    // Warning accent
-    emitGfx.fillStyle(0xf59e0b, 1);
-    emitGfx.fillRect(4, 3, 4, 3);
-    emitGfx.fillRect(24, 3, 4, 3);
-    emitGfx.generateTexture('hazard_laser_emitter', 32, 20);
+    emitGfx.fillRoundedRect(0, 0, 36, 22, 3);
+    emitGfx.lineStyle(1.5, 0xcbd5e1, 1);
+    emitGfx.strokeRoundedRect(0, 0, 36, 22, 3);
+    // Warning accent aperture
+    emitGfx.fillStyle(0xf97316, 0.85);
+    emitGfx.fillCircle(18, 11, 7);
+    emitGfx.fillStyle(0xffffff, 1);
+    emitGfx.fillCircle(18, 11, 3);
+    // Top caution stripes
+    emitGfx.fillStyle(0xfbbf24, 1);
+    emitGfx.fillRect(4, 2, 6, 3);
+    emitGfx.fillRect(26, 2, 6, 3);
+    emitGfx.generateTexture('hazard_laser_emitter', 36, 22);
     emitGfx.destroy();
+
+    // 22B. Suspended Mechanical Laser Gate Chassis (220x96 - Reference Recreation)
+    const gatePodGfx = this.make.graphics({ x: 0, y: 0, add: false });
+    // White chamfered mechanical chassis
+    gatePodGfx.fillStyle(0xffffff, 1);
+    gatePodGfx.fillRoundedRect(0, 0, 220, 96, 8);
+    gatePodGfx.lineStyle(2, 0xcbd5e1, 1);
+    gatePodGfx.strokeRoundedRect(0, 0, 220, 96, 8);
+
+    // Inner chamber recession (dark aperture allowing laser beams to glow inside)
+    gatePodGfx.fillStyle(0x0a1128, 0.45);
+    gatePodGfx.fillRect(24, 16, 172, 64);
+    gatePodGfx.lineStyle(1.5, 0xe2e8f0, 0.6);
+    gatePodGfx.strokeRect(24, 16, 172, 64);
+
+    // Top caution hazard stripes (diagonal yellow/orange hashes)
+    for (let hx = 60; hx < 160; hx += 16) {
+      gatePodGfx.fillStyle(0xfbbf24, 1);
+      gatePodGfx.fillRect(hx, 4, 8, 8);
+      gatePodGfx.fillStyle(0xf97316, 1);
+      gatePodGfx.fillRect(hx + 8, 4, 8, 8);
+    }
+
+    // Left and right vertical emitter caps with status LEDs
+    gatePodGfx.fillStyle(0xe2e8f0, 1);
+    gatePodGfx.fillRect(4, 14, 20, 68);
+    gatePodGfx.fillRect(196, 14, 20, 68);
+    gatePodGfx.fillStyle(0xf97316, 1);
+    gatePodGfx.fillCircle(14, 26, 4);
+    gatePodGfx.fillCircle(14, 48, 4);
+    gatePodGfx.fillCircle(14, 70, 4);
+    gatePodGfx.fillCircle(206, 26, 4);
+    gatePodGfx.fillCircle(206, 48, 4);
+    gatePodGfx.fillCircle(206, 70, 4);
+
+    // Suspension mount brackets on top
+    gatePodGfx.fillStyle(0x94a3b8, 1);
+    gatePodGfx.fillRect(50, -6, 16, 8);
+    gatePodGfx.fillRect(154, -6, 16, 8);
+
+    gatePodGfx.generateTexture('hazard_suspended_gate', 220, 96);
+    gatePodGfx.destroy();
 
     // 23. Plasma Turret Base (32x32)
     const turretGfx = this.make.graphics({ x: 0, y: 0, add: false });
@@ -761,6 +936,93 @@ export default class PreloadScene extends Phaser.Scene {
     dustGfx.fillCircle(12, 6, 4);
     dustGfx.generateTexture('vfx_landing_dust', 24, 12);
     dustGfx.destroy();
+
+    // 33. Pylon Flux Node (40x64)
+    const pylonGfx = this.make.graphics({ x: 0, y: 0, add: false });
+    pylonGfx.fillStyle(0x0a1020, 1);
+    pylonGfx.fillRoundedRect(4, 46, 32, 18, 4);
+    pylonGfx.lineStyle(1.5, 0x1e3a8a, 0.9);
+    pylonGfx.strokeRoundedRect(4, 46, 32, 18, 4);
+    pylonGfx.fillStyle(0x0f172a, 1);
+    pylonGfx.fillRect(12, 12, 16, 34);
+    pylonGfx.lineStyle(1.5, 0x00f0ff, 0.8);
+    pylonGfx.strokeRect(12, 12, 16, 34);
+    pylonGfx.fillStyle(0x00f0ff, 0.8);
+    pylonGfx.fillRect(15, 16, 10, 26);
+    pylonGfx.fillStyle(0xffffff, 1);
+    pylonGfx.fillRect(18, 20, 4, 18);
+    pylonGfx.fillStyle(0x00f0ff, 1);
+    pylonGfx.fillTriangle(20, 2, 28, 12, 12, 12);
+    pylonGfx.generateTexture('pylon_flux_node', 40, 64);
+    pylonGfx.destroy();
+
+    // 34. Pylon Glyph Alpha (28x28)
+    const alphaGfx = this.make.graphics({ x: 0, y: 0, add: false });
+    alphaGfx.lineStyle(2.5, 0x00f0ff, 1);
+    alphaGfx.beginPath();
+    alphaGfx.arc(12, 14, 7, 0, Math.PI * 2);
+    alphaGfx.moveTo(7, 9);
+    alphaGfx.lineTo(24, 21);
+    alphaGfx.strokePath();
+    alphaGfx.generateTexture('pylon_glyph_alpha', 28, 28);
+    alphaGfx.destroy();
+
+    // 35. Pylon Glyph Beta (28x28)
+    const betaGfx = this.make.graphics({ x: 0, y: 0, add: false });
+    betaGfx.lineStyle(2.5, 0xa855f7, 1);
+    betaGfx.lineBetween(7, 4, 7, 24);
+    betaGfx.beginPath();
+    betaGfx.arc(14, 9, 5, -Math.PI / 2, Math.PI / 2);
+    betaGfx.arc(14, 17, 5, -Math.PI / 2, Math.PI / 2);
+    betaGfx.strokePath();
+    betaGfx.generateTexture('pylon_glyph_beta', 28, 28);
+    betaGfx.destroy();
+
+    // 36. Arena Barrier Field (20x240)
+    const barrierGfx = this.make.graphics({ x: 0, y: 0, add: false });
+    barrierGfx.fillStyle(0x00f0ff, 0.25);
+    barrierGfx.fillRect(4, 0, 12, 240);
+    barrierGfx.lineStyle(2, 0x00f0ff, 0.9);
+    barrierGfx.lineBetween(10, 0, 10, 240);
+    barrierGfx.lineStyle(1.5, 0xa855f7, 0.8);
+    for (let by = 0; by < 240; by += 24) {
+      barrierGfx.lineBetween(2, by, 18, by + 12);
+      barrierGfx.lineBetween(2, by + 12, 18, by);
+    }
+    barrierGfx.generateTexture('arena_barrier_field', 20, 240);
+    barrierGfx.destroy();
+
+    // 37. Sine Platform (84x22)
+    const sinePlatGfx = this.make.graphics({ x: 0, y: 0, add: false });
+    sinePlatGfx.fillStyle(0x0a1128, 1);
+    sinePlatGfx.fillRoundedRect(2, 2, 80, 18, 4);
+    sinePlatGfx.lineStyle(1.5, 0x00f0ff, 0.85);
+    sinePlatGfx.strokeRoundedRect(2, 2, 80, 18, 4);
+    sinePlatGfx.fillStyle(0x00f0ff, 1);
+    sinePlatGfx.fillRect(6, 2, 72, 3);
+    sinePlatGfx.lineStyle(1.5, 0x38bdf8, 0.9);
+    sinePlatGfx.beginPath();
+    for (let sx = 14; sx <= 70; sx += 2) {
+      const sy = 11 + Math.sin((sx - 14) * 0.18) * 4;
+      if (sx === 14) sinePlatGfx.moveTo(sx, sy);
+      else sinePlatGfx.lineTo(sx, sy);
+    }
+    sinePlatGfx.strokePath();
+    sinePlatGfx.generateTexture('sine_platform', 84, 22);
+    sinePlatGfx.destroy();
+
+    // 38. Vector Reticle (32x32)
+    const reticleGfx = this.make.graphics({ x: 0, y: 0, add: false });
+    reticleGfx.lineStyle(1.5, 0x00f0ff, 0.9);
+    reticleGfx.strokeCircle(16, 16, 12);
+    reticleGfx.lineBetween(16, 2, 16, 8);
+    reticleGfx.lineBetween(16, 24, 16, 30);
+    reticleGfx.lineBetween(2, 16, 8, 16);
+    reticleGfx.lineBetween(24, 16, 30, 16);
+    reticleGfx.fillStyle(0x00f0ff, 1);
+    reticleGfx.fillCircle(16, 16, 2);
+    reticleGfx.generateTexture('vector_reticle', 32, 32);
+    reticleGfx.destroy();
   }
 
   create() {

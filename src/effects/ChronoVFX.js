@@ -11,34 +11,53 @@ export class ChronoVFX {
     // 1. Expanding cyan origin flare ring
     const flare = scene.add.image(x, y, 'vfx_shockwave_ring').setDepth(21);
     flare.setScale(0.2);
-    flare.setAlpha(0.9);
+    flare.setAlpha(0.95);
     flare.setTint(0x00f0ff);
 
     scene.tweens.add({
       targets: flare,
-      scale: 1.2,
+      scale: 1.3,
       alpha: 0,
       duration: 220,
       ease: 'Cubic.easeOut',
       onComplete: () => flare.destroy()
     });
 
-    // 2. Directional streak
-    const streak = scene.add.image(x - dirX * 20, y - dirY * 10, 'vfx_dash_streak').setDepth(20);
-    streak.setAngle(Math.atan2(dirY, dirX) * (180 / Math.PI));
-    streak.setScale(1.4, 1.2);
-    streak.setAlpha(0.85);
+    // 2. Forward Aerodynamic Conical Speed Aura (Matching Reference)
+    const cone = scene.add.image(x + dirX * 8, y, 'vfx_dash_cone').setDepth(22);
+    cone.setFlipX(dirX < 0);
+    cone.setAlpha(0.85);
+    cone.setScale(1.1);
 
     scene.tweens.add({
-      targets: streak,
-      scaleX: 2.2,
+      targets: cone,
+      scaleX: 1.4,
+      scaleY: 0.9,
       alpha: 0,
-      duration: 260,
+      duration: 240,
       ease: 'Quad.easeOut',
-      onComplete: () => streak.destroy()
+      onComplete: () => cone.destroy()
     });
 
-    // 3. Backward dispersing particles (capped to 6 particles)
+    // 3. Directional trailing energy streaks
+    for (let s = 0; s < 3; s++) {
+      const streakY = y + (s - 1) * 8;
+      const streak = scene.add.image(x - dirX * (20 + s * 14), streakY, 'vfx_dash_streak').setDepth(20);
+      streak.setAngle(Math.atan2(dirY, dirX) * (180 / Math.PI));
+      streak.setScale(1.2 + s * 0.2, 1.0);
+      streak.setAlpha(0.85 - s * 0.15);
+
+      scene.tweens.add({
+        targets: streak,
+        scaleX: 2.4,
+        alpha: 0,
+        duration: 220 + s * 40,
+        ease: 'Quad.easeOut',
+        onComplete: () => streak.destroy()
+      });
+    }
+
+    // 4. Backward dispersing particles (capped to 6 particles)
     const particleCount = isReduced ? 3 : 6;
     for (let i = 0; i < particleCount; i++) {
       const p = scene.add.image(
@@ -47,7 +66,7 @@ export class ChronoVFX {
         'particle_cyan'
       ).setDepth(21);
       p.setScale(Phaser.Math.FloatBetween(0.5, 0.9));
-      p.setAlpha(0.8);
+      p.setAlpha(0.85);
 
       const speed = Phaser.Math.Between(80, 220);
       const angle = Math.atan2(-dirY, -dirX) + Phaser.Math.FloatBetween(-0.5, 0.5);
@@ -64,26 +83,26 @@ export class ChronoVFX {
       });
     }
 
-    // 4. Subtle camera impulse
+    // 5. Subtle camera impulse
     if (!isReduced && scene.cameras && scene.cameras.main) {
       scene.cameras.main.shake(120, 0.003);
     }
   }
 
   /**
-   * Spawns a fading afterimage silhouette of the player
+   * Spawns a fading afterimage silhouette of the player (Matching Reference)
    */
   static spawnAfterimage(scene, x, y, textureKey = 'player_avatar', flipX = false) {
     const ghost = scene.add.image(x, y, textureKey).setDepth(17);
     ghost.setFlipX(flipX);
     ghost.setTint(0x00f0ff);
-    ghost.setAlpha(0.55);
+    ghost.setAlpha(0.65);
 
     scene.tweens.add({
       targets: ghost,
       alpha: 0,
-      scaleX: ghost.scaleX * 1.05,
-      duration: 240,
+      scaleX: ghost.scaleX * 1.04,
+      duration: 260,
       ease: 'Linear',
       onComplete: () => ghost.destroy()
     });

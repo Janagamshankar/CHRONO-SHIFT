@@ -5,16 +5,19 @@ import { audioManager } from '../systems/AudioManager.js';
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y) {
-    super(scene, x, y, 'player_avatar');
+    super(scene, x, y, 'player_run_0');
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
-    // Physics configuration
+    // Physics configuration: 24x46 hitbox, offset (20, 12) aligns feet at y = 58
     this.setCollideWorldBounds(true);
     this.body.setSize(24, 46);
-    this.body.setOffset(4, 2);
+    this.body.setOffset(20, 12);
     this.setDepth(18);
+
+    // Initial state: play idle stance
+    this.play('player_idle');
 
     // Authoritative attributes
     this.health = GAME_SETTINGS.PLAYER.MAX_HEALTH;
@@ -103,7 +106,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       this.facing = -1;
       this.setFlipX(true);
       if (isGrounded) {
-        this.setAngle(-4); // Dynamic running stride tilt
         this.footstepTimer += 16;
         if (this.footstepTimer > 180) {
           this.footstepTimer = 0;
@@ -116,7 +118,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       this.facing = 1;
       this.setFlipX(false);
       if (isGrounded) {
-        this.setAngle(4); // Dynamic running stride tilt
         this.footstepTimer += 16;
         if (this.footstepTimer > 180) {
           this.footstepTimer = 0;
@@ -126,7 +127,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       }
     } else {
       this.setVelocityX(0);
-      if (isGrounded) this.setAngle(0);
     }
 
     // 3. Jump (Supports Spacebar, Arrow Up, and W with coyote grace)
@@ -137,7 +137,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     if (wantsJump && (isGrounded || this.coyoteTimer > 0)) {
       this.coyoteTimer = 0; // Consume coyote grace
       this.setVelocityY(this.jumpVelocity);
-      this.setTexture('player_avatar_jump');
+      this.play('player_jump', true);
       audioManager.play('jump');
       this.scene.tweens.add({
         targets: this,
@@ -151,12 +151,32 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       this.scene.add.image(this.x, this.y + 22, 'particle_cyan').setScale(0.7).setAlpha(0.6);
     }
 
-    // 4. State-driven Poses
-    if (!isGrounded && !this.isSliding) {
-      this.setTexture('player_avatar_jump');
-      this.setAngle(this.facing * (this.body.velocity.y < 0 ? -2 : 3));
-    } else if (!this.isSliding) {
-      this.setTexture('player_avatar');
+    // 4. State-driven Animation Playback
+    if (this.isSliding) {
+      if (this.anims.currentAnim?.key !== 'player_slide') {
+        this.play('player_slide', true);
+      }
+    } else if (!isGrounded) {
+      if (this.body.velocity.y < 0) {
+        if (this.anims.currentAnim?.key !== 'player_jump') {
+          this.play('player_jump', true);
+        }
+      } else {
+        if (this.anims.currentAnim?.key !== 'player_fall') {
+          this.play('player_fall', true);
+        }
+      }
+    } else {
+      // Grounded state
+      if (Math.abs(this.body.velocity.x) > 10) {
+        if (this.anims.currentAnim?.key !== 'player_run') {
+          this.play('player_run', true);
+        }
+      } else {
+        if (this.anims.currentAnim?.key !== 'player_idle') {
+          this.play('player_idle', true);
+        }
+      }
     }
 
     this.wasGrounded = isGrounded;
@@ -164,12 +184,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   startSlide() {
     this.isSliding = true;
-    this.setTexture('player_avatar_slide');
-    // Reduce collision height safely
-    this.body.setSize(24, 24);
-    this.body.setOffset(4, 24);
+    this.play('player_slide', true);
+    // Low-profile collision box safely aligned with floor at y: 58 (height: 24, offset: 13, 34)
+    this.body.setSize(38, 24);
+    this.body.setOffset(13, 34);
     this.setVelocityX(this.facing * this.slideVelocity);
-    this.setAngle(this.facing * 12); // Dynamic slide pose tilt
+    this.setAngle(0);
 
     if (this.slideTimer) this.slideTimer.remove();
     this.slideTimer = this.scene.time.delayedCall(GAME_SETTINGS.PLAYER.SLIDE_DURATION_MS, () => {
@@ -179,12 +199,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   stopSlide() {
     this.isSliding = false;
-    this.setTexture('player_avatar');
     this.setAngle(0);
     this.setScale(1, 1);
-    // Restore standing collision box safely
+    // Restore standing collision box safely (24x46, offset: 20, 12 aligns at y: 58)
     this.body.setSize(24, 46);
-    this.body.setOffset(4, 2);
+    this.body.setOffset(20, 12);
+    this.play('player_idle', true);
   }
 
   /**
@@ -205,6 +225,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     // Deduct energy exactly once
     this.energy = Math.max(0, this.energy - cost);
     this.isDashing = true;
+    this.play('player_dash', true);
 
     // Trigger distinctive dash audio sequence
     audioManager.play('dash');
@@ -220,13 +241,13 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     // Spawn origin dash burst & streaks
     ChronoVFX.spawnDashBurst(this.scene, this.x, this.y, dirX, dirY);
 
-    // Spawn afterimages every 60ms
+    // Spawn afterimages every 40ms for dense trailing stream matching reference
     if (this.afterimageTimer) this.afterimageTimer.remove();
     this.afterimageTimer = this.scene.time.addEvent({
-      delay: 60,
-      repeat: 4,
+      delay: 40,
+      repeat: 6,
       callback: () => {
-        ChronoVFX.spawnAfterimage(this.scene, this.x, this.y, 'player_avatar', this.flipX);
+        ChronoVFX.spawnAfterimage(this.scene, this.x, this.y, 'player_dash', this.flipX);
       }
     });
 

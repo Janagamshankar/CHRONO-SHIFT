@@ -22,6 +22,7 @@ export default class FoundationTestScene extends Phaser.Scene {
   create() {
     const { width, height } = this.scale;
     const worldWidth = 5120; // 4 Distinct 1280px Sections (A, B, C, D)
+    const baseHeight = Math.max(720, height);
     const groundY = 615;
 
     // Start background music loop
@@ -35,38 +36,59 @@ export default class FoundationTestScene extends Phaser.Scene {
     this.latestCheckpoint = { x: 120, y: groundY - 50, sectionId: 'A', title: 'SEC A: AWAKENING' };
     this.visitedSections = new Set(['A']);
     this.checkpointsActivatedCount = 0;
+    this.coreFragmentsCollected = 0;
 
     // 2. Physics World & Camera Setup
-    this.physics.world.setBounds(0, 0, worldWidth, height + 80);
-    this.cameras.main.setBounds(0, 0, worldWidth, height);
+    this.physics.world.setBounds(0, 0, worldWidth, baseHeight + 100);
+    this.cameras.main.setBounds(0, 0, worldWidth, baseHeight);
+    this.cameras.main.setViewport(0, 0, width, height);
     this.cameras.main.fadeIn(350, 5, 8, 20);
 
+    // Responsive window resize listener
+    this.scale.on('resize', this.onWindowResize, this);
+
+    // Fullscreen toggle or Core Restoration interaction via [F] key
+    this.input.keyboard.on('keydown-F', () => {
+      if (this.chronoCore && this.chronoCore.state === 'PHASE_3' && Math.abs(this.player.x - 4760) < 180) {
+        this.handleLevelCompletion();
+        return;
+      }
+      if (this.scale.isFullscreen) {
+        this.scale.stopFullscreen();
+      } else {
+        this.scale.startFullscreen();
+      }
+    });
+
     // 3. Parallax Environment (Anchored with Camera Tracking)
-    this.bgSkyGradient = this.add.image(width / 2, height / 2, 'bg_sky_gradient').setDepth(0);
+    this.bgSkyGradient = this.add.image(width / 2, baseHeight / 2, 'bg_sky_gradient').setDepth(0);
+    this.bgSkyGradient.setDisplaySize(Math.max(1280, width) + 300, baseHeight + 100);
 
-    // Celestial Fractured Temporal Moon (Very slow deep celestial drift)
-    this.bgMoon = this.add.image(width / 2, 140, 'celestial_temporal_moon').setDepth(1).setAlpha(0.85);
+    // High-resolution Aethelon Floating Sky City Matte Painting (Distant Layer)
+    this.bgCityMatte = this.add.image(width / 2, baseHeight / 2, 'bg_aethelon_city')
+      .setDepth(1)
+      .setScale(Math.max(1.18, width / 1280))
+      .setAlpha(0.92);
 
-    this.bgSkyline = this.add.tileSprite(width / 2, 360, width, 400, 'bg_distant_skyline').setDepth(2).setAlpha(0.65);
-    this.bgCloudsBack = this.add.tileSprite(width / 2, 450, width, 240, 'cloud_bank_layer').setDepth(3).setAlpha(0.75);
-    this.bgCity = this.add.tileSprite(width / 2, 460, width, 450, 'bg_midground_city').setDepth(4).setAlpha(0.9);
-    this.bgCloudsFront = this.add.tileSprite(width / 2, 530, width, 240, 'cloud_bank_layer').setDepth(5).setAlpha(0.5);
+    this.bgSkyline = this.add.tileSprite(width / 2, 360, width + 200, 400, 'bg_distant_skyline').setDepth(2).setAlpha(0.25);
+    this.bgCloudsBack = this.add.tileSprite(width / 2, 590, width + 200, 280, 'cloud_bank_layer').setDepth(3).setAlpha(0.45);
+    this.bgCity = this.add.tileSprite(width / 2, 460, width + 200, 450, 'bg_midground_city').setDepth(4).setAlpha(0.3);
+    this.bgCloudsFront = this.add.tileSprite(width / 2, 635, width + 200, 280, 'cloud_bank_layer').setDepth(5).setAlpha(0.4);
+
+    // Right Edge Framing Architectural Spire Tower (Anchored to right screen edge matching reference)
+    this.bgRightTower = this.add.image(width, height / 2, 'bg_right_tower')
+      .setOrigin(1, 0.5)
+      .setScrollFactor(0)
+      .setDepth(12);
 
     // Distant Skyway Transit Traffic
     this.skyCruisers = [];
     const cruiserY = [220, 260, 310, 350];
     cruiserY.forEach((cy, idx) => {
       const c = this.add.image(idx * 800 + 200, cy, 'bg_skyway_traffic').setDepth(2);
-      c.setAlpha(0.7);
+      c.setAlpha(0.75);
       c.speed = 45 + idx * 25;
       this.skyCruisers.push(c);
-    });
-
-    // Near-Background Structural Tech Conduits
-    const conduitPositions = [600, 1220, 1800, 2480, 3100, 3760, 4400];
-    conduitPositions.forEach(cx => {
-      const cond = this.add.image(cx, 440, 'near_tech_conduits').setDepth(13).setAlpha(0.6);
-      cond.setScale(1.2);
     });
 
     // Holographic Gateway Arches at Section Boundaries
@@ -98,7 +120,7 @@ export default class FoundationTestScene extends Phaser.Scene {
     this.groundPlatforms = this.physics.add.staticGroup();
     this.pitZones = this.physics.add.group();
 
-    // Helper: Build tiled platform segment
+    // Helper: Build tiled platform segment with white architectural columns & brackets
     const buildPlatformSegment = (startX, endX, y = groundY) => {
       const tileW = 64;
       const count = Math.ceil((endX - startX) / tileW);
@@ -114,11 +136,21 @@ export default class FoundationTestScene extends Phaser.Scene {
         }
       }
 
+      // Add architectural column bracket support underneath floating platforms (Reference Recreation)
+      const segW = endX - startX;
+      if (segW >= 220) {
+        const midX = (startX + endX) / 2;
+        this.add.image(midX, y + 115, 'platform_pillar_bracket').setDepth(13);
+      } else if (segW >= 120) {
+        const midX = (startX + endX) / 2;
+        this.add.image(midX, y + 25, 'platform_floating_small').setDepth(13);
+      }
+
       // Glowing surface rail
       const rail = this.add.graphics().setDepth(16);
-      rail.lineStyle(2, 0x00f0ff, 0.9);
+      rail.lineStyle(2, 0x00f0ff, 0.95);
       rail.lineBetween(startX, y - 22, endX, y - 22);
-      rail.lineStyle(1, 0xffffff, 0.7);
+      rail.lineStyle(1, 0xffffff, 0.8);
       rail.lineBetween(startX, y - 22, endX, y - 22);
     };
 
@@ -143,7 +175,7 @@ export default class FoundationTestScene extends Phaser.Scene {
     buildPlatformSegment(0, 480);
     buildVoidPit(480, 620); // 140px jump gap (feasibility: max jump reach 416px)
     buildPlatformSegment(620, 920);
-    buildVoidPit(920, 1100); // 180px gap with dash arrow
+    buildVoidPit(920, 1100); // 180px gap with dash arrow & temporal orb
     buildPlatformSegment(1100, 1340);
 
     // Vector Jump/Dash Guide Visual in Section A
@@ -194,14 +226,15 @@ export default class FoundationTestScene extends Phaser.Scene {
     buildPlatformSegment(3580, 3900);
 
     // --- SECTION D: CHRONO CORE (x: 3840 -> 5120) ---
-    // Climax set-piece: Dual hazards, synchronized laser, collapsing platform 2, and Chrono Core!
-    buildPlatformSegment(3900, 4200);
-    buildVoidPit(4200, 4360);
-    buildPlatformSegment(4360, 4440);
-    buildVoidPit(4440, 4600); // Spanned by Collapsing Platform 2
-    buildPlatformSegment(4600, 4720);
-    // Elevated Chrono Core reactor dais
-    buildPlatformSegment(4720, 5080, groundY);
+    // Approach gauntlet (3840 -> 4460) & Chrono Core Singularity Chamber (4460 -> 5100)
+    buildPlatformSegment(3840, 4140);
+    buildVoidPit(4140, 4280); // 140px gap bridged by Collapsing Platform 2 at x: 4210
+    buildPlatformSegment(4280, 4460); // Approach chasm platform with LaserGate 2 and RotatingBlade 2
+    // Grand Chrono Core reactor chamber floor
+    buildPlatformSegment(4460, 5100, groundY);
+    // Elevated Pylon Daises for Pylon Alpha and Beta
+    buildPlatformSegment(4530, 4630, 505);
+    buildPlatformSegment(4890, 4990, 505);
 
     // 5. Player Entity Setup
     this.player = new Player(this, this.latestCheckpoint.x, this.latestCheckpoint.y);
@@ -251,6 +284,17 @@ export default class FoundationTestScene extends Phaser.Scene {
 
     // 7. HAZARD & OBSTACLE ARCHITECTURE
 
+    // --- Section A Hazards ---
+    // Suspended Horizontal Laser Gate in Section A (Matching Reference Screenshot)
+    this.laserGate0 = new LaserGate(this, 310, 220, {
+      horizontal: true,
+      startActive: true,
+      activeMs: 3200,
+      coolMs: 1400,
+      chargeMs: 1200,
+      damage: 25
+    });
+
     // --- Section B Hazards ---
     // Timed Laser Gate 1 at x: 1750
     this.laserGate1 = new LaserGate(this, 1750, 535, {
@@ -299,44 +343,80 @@ export default class FoundationTestScene extends Phaser.Scene {
       delayMs: 600
     });
 
-    // --- Section D Hazards (Climax Set-Piece) ---
-    // Timed Laser Gate 2 at x: 4120
-    this.laserGate2 = new LaserGate(this, 4120, 535, {
+    // --- Section D Hazards (Approach Gauntlet & Climax Set-Piece) ---
+    // Collapsing Platform 2 bridging approach gap at x: 4210, y: groundY
+    this.colPlatform2 = new CollapsingPlatform(this, 4210, groundY, {
+      warningDurationMs: 500,
+      respawnDelayMs: 2400
+    });
+
+    // Vector Dash Trajectory Guide above approach gap
+    this.add.image(4210, 530, 'trajectory_arrow').setDepth(16).setScale(1.2);
+    this.add.text(4210, 505, 'VECTOR DASH [E]', {
+      fontFamily: 'Rajdhani, sans-serif',
+      fontSize: '13px',
+      fontWeight: '700',
+      color: '#00f0ff',
+      letterSpacing: 2
+    }).setOrigin(0.5).setDepth(20);
+
+    // Timed Laser Gate 2 at x: 4340 (Synchronized approach gate)
+    this.laserGate2 = new LaserGate(this, 4340, 535, {
       height: 160,
       chargeMs: 1000,
       activeMs: 1500,
       coolMs: 1300,
       damage: 25,
-      delayMs: 400
+      delayMs: 300
     });
 
-    // Rotating Blade 2 at x: 4320, y: 558
-    this.rotatingBlade2 = new RotatingBlade(this, 4320, 558, {
+    // Rotating Blade 2 at x: 4410, y: 558
+    this.rotatingBlade2 = new RotatingBlade(this, 4410, 558, {
       radius: 28,
       angularSpeed: 240,
       damage: 20
     });
 
-    // Collapsing Platform 2 bridging final gap at x: 4520, y: groundY
-    this.colPlatform2 = new CollapsingPlatform(this, 4520, groundY, {
-      warningDurationMs: 500,
-      respawnDelayMs: 2400
+    // 8. CHRONO CORE FINALE REACTOR (Section D Destination: Chamber Center at 4760, 440)
+    this.chronoCore = new ChronoCore(this, 4760, 440);
+
+    // Chrono Core Chamber Colliders & Overlaps
+    this.physics.add.collider(this.player, this.chronoCore.barrier);
+
+    this.physics.add.collider(this.player, this.chronoCore.sinePlatform, (player, plat) => {
+      if (player.body.touching.down && plat.body.touching.up) {
+        if (!this.chronoCore.isPlatformFrozen && plat.platVx) {
+          player.x += plat.platVx * (1 / 60);
+        }
+      }
     });
 
-    // Plasma Turret 2 mounted at x: 4700, y: 575
-    this.plasmaTurret2 = new PlasmaTurret(this, 4700, 575, {
-      angleDeg: 180,
-      fireIntervalMs: 2200,
-      chargeTellMs: 500,
-      projSpeed: 250,
-      damage: 20,
-      delayMs: 800
+    this.physics.add.overlap(this.player, this.chronoCore.pylonAlpha.trigger, () => {
+      this.chronoCore.calibratePylon('alpha');
     });
 
-    // 8. CHRONO CORE FINALE REACTOR (Section D Destination)
-    this.chronoCore = new ChronoCore(this, 4920, 510);
+    this.physics.add.overlap(this.player, this.chronoCore.pylonBeta.trigger, () => {
+      this.chronoCore.calibratePylon('beta');
+    });
+
     this.physics.add.overlap(this.player, this.chronoCore.triggerZone, () => {
-      this.handleLevelCompletion();
+      if (this.chronoCore.state === 'PHASE_3') {
+        this.handleLevelCompletion();
+      }
+    });
+
+    this.chronoCore.harmonicLasers.forEach(laser => {
+      this.physics.add.overlap(this.player, laser.hitbox, () => {
+        if (!laser.isFrozen && laser.isActive) {
+          this.player.takeDamage(laser.damage);
+        }
+      });
+    });
+
+    this.chronoCore.arenaCells.forEach(cell => {
+      this.physics.add.overlap(this.player, cell, () => {
+        this.chronoCore.handleCellPickup(this.player, cell);
+      });
     });
 
     // Colliders and Overlaps for All Hazards
@@ -355,6 +435,11 @@ export default class FoundationTestScene extends Phaser.Scene {
       this.movePlatform1.handleRider(player);
     });
 
+    this.physics.add.overlap(this.player, this.laserGate0.hitbox, () => {
+      if (!this.laserGate0.isFrozen && this.laserGate0.state === 'ACTIVE') {
+        this.player.takeDamage(this.laserGate0.damage);
+      }
+    });
     this.physics.add.overlap(this.player, this.laserGate1.hitbox, () => {
       if (!this.laserGate1.isFrozen && this.laserGate1.state === 'ACTIVE') {
         this.player.takeDamage(this.laserGate1.damage);
@@ -383,12 +468,6 @@ export default class FoundationTestScene extends Phaser.Scene {
         if (hit !== false) proj.detonate();
       }
     });
-    this.physics.add.overlap(this.player, this.plasmaTurret2.projectiles, (player, proj) => {
-      if (!proj.isFrozen) {
-        const hit = player.takeDamage(proj.damage);
-        if (hit !== false) proj.detonate();
-      }
-    });
 
     this.physics.add.overlap(this.player, this.drone1, () => {
       if (!this.drone1.isFrozen) {
@@ -396,11 +475,12 @@ export default class FoundationTestScene extends Phaser.Scene {
       }
     });
 
-    // 9. Chrono Energy Recharge Pickups Across All Sections
+    // 9. Chrono Energy Recharge Pickups & Floating Temporal Orbs Across All Sections
     this.energyCells = [];
     const cellPositions = [
       { x: 320, y: 550 },
       { x: 800, y: 550 },
+      { x: 960, y: 460, isTemporalOrb: true }, // The iconic Floating Temporal Orb from Reference!
       { x: 1540, y: 550 },
       { x: 2000, y: 400 },
       { x: 2740, y: 550 },
@@ -410,17 +490,27 @@ export default class FoundationTestScene extends Phaser.Scene {
     ];
 
     cellPositions.forEach((pos, idx) => {
-      const cell = this.physics.add.image(pos.x, pos.y, 'cell_orb').setDepth(18);
+      const tex = pos.isTemporalOrb ? 'temporal_orb' : 'temporal_orb';
+      const cell = this.physics.add.image(pos.x, pos.y, tex).setDepth(18);
       cell.body.setAllowGravity(false);
-      cell.setScale(1.2);
+      cell.setScale(pos.isTemporalOrb ? 1.05 : 0.85);
 
       this.tweens.add({
         targets: cell,
-        y: pos.y - 14,
+        y: pos.y - 12,
         duration: 1100 + (idx % 3) * 150,
         yoyo: true,
         repeat: -1,
         ease: 'Sine.easeInOut'
+      });
+
+      // Subtle slow rotation of concentric rings
+      this.tweens.add({
+        targets: cell,
+        angle: 360,
+        duration: 16000,
+        repeat: -1,
+        ease: 'Linear'
       });
 
       this.physics.add.overlap(this.player, cell, () => {
@@ -438,8 +528,85 @@ export default class FoundationTestScene extends Phaser.Scene {
       this.energyCells.push(cell);
     });
 
+    // 9b. Chrono Core Fragment Collectibles (3 Fragments Required for Chrono Core Synthesis)
+    this.coreFragments = [];
+    const fragmentDefs = [
+      { id: 1, x: 800, y: 535, label: 'CORE FRAGMENT α' },
+      { id: 2, x: 2000, y: 390, label: 'CORE FRAGMENT β' },
+      { id: 3, x: 3300, y: 400, label: 'CORE FRAGMENT γ' }
+    ];
+
+    fragmentDefs.forEach((fDef) => {
+      const frag = this.physics.add.image(fDef.x, fDef.y, 'core_fragment').setDepth(22);
+      frag.body.setAllowGravity(false);
+      frag.collected = false;
+
+      // Floating sine wave animation
+      this.tweens.add({
+        targets: frag,
+        y: fDef.y - 12,
+        duration: 1200,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut'
+      });
+
+      // Subtle rotation
+      this.tweens.add({
+        targets: frag,
+        angle: 360,
+        duration: 9000,
+        repeat: -1,
+        ease: 'Linear'
+      });
+
+      // Ambient pulsing glow aura
+      const aura = this.add.circle(fDef.x, fDef.y, 22, 0x00f0ff, 0.28).setDepth(21);
+      this.tweens.add({
+        targets: aura,
+        scale: 1.45,
+        alpha: 0.08,
+        yoyo: true,
+        repeat: -1,
+        duration: 1000
+      });
+
+      this.physics.add.overlap(this.player, frag, () => {
+        if (frag.collected) return;
+        frag.collected = true;
+        this.coreFragmentsCollected++;
+        this.score += 250;
+        audioManager.play('cellPickup');
+        this.player.rechargeEnergy(100);
+
+        // Radial temporal shockwave
+        ChronoVFX.spawnFreezeShockwave(this, frag.x, frag.y);
+
+        // Ascension pickup animation
+        this.tweens.add({
+          targets: [frag, aura],
+          y: frag.y - 35,
+          alpha: 0,
+          scale: 1.6,
+          duration: 350,
+          onComplete: () => {
+            frag.destroy();
+            aura.destroy();
+          }
+        });
+
+        // Holographic HUD notification banner
+        if (this.hud && this.hud.showFragmentBanner) {
+          this.hud.showFragmentBanner(fDef.label, this.coreFragmentsCollected);
+        }
+      });
+
+      this.coreFragments.push(frag);
+    });
+
     // 10. Chrono Freeze Eligible Targets List
     this.eligibleHazards = [
+      this.laserGate0,
       this.laserGate1,
       this.laserGate2,
       this.rotatingBlade1,
@@ -448,8 +615,9 @@ export default class FoundationTestScene extends Phaser.Scene {
       this.colPlatform1,
       this.colPlatform2,
       this.plasmaTurret1,
-      this.plasmaTurret2,
-      this.drone1
+      this.drone1,
+      this.chronoCore.sinePlatform,
+      ...this.chronoCore.harmonicLasers
     ];
 
     // 11. Mission Countdown Clock
@@ -523,6 +691,33 @@ export default class FoundationTestScene extends Phaser.Scene {
       this.handlePlayerDeath();
     });
 
+    // QA Showcase Navigation Hotkeys [1-5]: Jump directly to any section or Core Arena
+    this.input.keyboard.on('keydown-ONE', () => {
+      if (this.player && !this.isLevelComplete) {
+        this.player.x = 120; this.player.y = 550; this.player.setVelocity(0, 0);
+      }
+    });
+    this.input.keyboard.on('keydown-TWO', () => {
+      if (this.player && !this.isLevelComplete) {
+        this.player.x = 1300; this.player.y = 550; this.player.setVelocity(0, 0);
+      }
+    });
+    this.input.keyboard.on('keydown-THREE', () => {
+      if (this.player && !this.isLevelComplete) {
+        this.player.x = 2580; this.player.y = 550; this.player.setVelocity(0, 0);
+      }
+    });
+    this.input.keyboard.on('keydown-FOUR', () => {
+      if (this.player && !this.isLevelComplete) {
+        this.player.x = 3860; this.player.y = 550; this.player.setVelocity(0, 0);
+      }
+    });
+    this.input.keyboard.on('keydown-FIVE', () => {
+      if (this.player && !this.isLevelComplete) {
+        this.player.x = 4480; this.player.y = 550; this.player.setVelocity(0, 0);
+      }
+    });
+
     // M: Toggle Audio Mute
     this.input.keyboard.on('keydown-M', () => {
       const muted = audioManager.toggleMute();
@@ -562,17 +757,24 @@ export default class FoundationTestScene extends Phaser.Scene {
       this.debugContainer.setVisible(this.debugVisible);
     };
     this.input.keyboard.on('keydown-TILDE', toggleDiagnostics);
-    this.input.keyboard.on('keydown-D', toggleDiagnostics);
 
     // Clean scene shutdown
     this.events.on('shutdown', () => {
+      audioManager.applyTemporalFilter(false);
       if (this.input && this.input.keyboard) {
         this.input.keyboard.off('keydown-Q');
         this.input.keyboard.off('keydown-E');
         this.input.keyboard.off('keydown-SHIFT');
         this.input.keyboard.off('keydown-ESC');
         this.input.keyboard.off('keydown-TILDE');
-        this.input.keyboard.off('keydown-D');
+        this.input.keyboard.off('keydown-P');
+        this.input.keyboard.off('keydown-R');
+        this.input.keyboard.off('keydown-M');
+        this.input.keyboard.off('keydown-ONE');
+        this.input.keyboard.off('keydown-TWO');
+        this.input.keyboard.off('keydown-THREE');
+        this.input.keyboard.off('keydown-FOUR');
+        this.input.keyboard.off('keydown-FIVE');
       }
       if (this.timerEvent) this.timerEvent.remove();
       this.checkpoints.forEach(cp => cp.destroy());
@@ -874,7 +1076,30 @@ export default class FoundationTestScene extends Phaser.Scene {
    */
   handlePlayerDeath() {
     if (this.isGamePaused) this.resumeGame();
-    this.player.respawnAt(this.latestCheckpoint.x, this.latestCheckpoint.y);
+    if (this.chronoCore) this.chronoCore.resetEncounter();
+
+    const totalSec = Math.max(0, Math.floor(this.countdownSeconds));
+    const mins = Math.floor(totalSec / 60);
+    const secs = totalSec % 60;
+    const timeStr = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+    this.hud.showGameOverOverlay(
+      {
+        score: this.score,
+        checkpoint: `CP-${this.latestCheckpoint.sectionId} [${this.latestCheckpoint.title}]`,
+        coreFragments: this.coreFragmentsCollected,
+        timeStr
+      },
+      () => {
+        this.player.respawnAt(this.latestCheckpoint.x, this.latestCheckpoint.y);
+      },
+      () => {
+        this.scene.restart();
+      },
+      () => {
+        this.scene.start('MenuScene');
+      }
+    );
   }
 
   /**
@@ -898,7 +1123,8 @@ export default class FoundationTestScene extends Phaser.Scene {
 
     // Calculate completion bonuses
     const timeBonus = this.countdownSeconds * 5;
-    this.score += 500 + timeBonus; // 500 core bonus + time bonus
+    const fragBonus = this.coreFragmentsCollected * 500;
+    this.score += 500 + timeBonus + fragBonus; // 500 core bonus + time bonus + fragments bonus
 
     const totalSec = Math.max(0, Math.floor(this.countdownSeconds));
     const mins = Math.floor(totalSec / 60);
@@ -910,6 +1136,7 @@ export default class FoundationTestScene extends Phaser.Scene {
       this.hud.showVictoryOverlay({
         score: this.score,
         timeStr,
+        coreFragments: this.coreFragmentsCollected,
         checkpoints: this.checkpointsActivatedCount + 1
       });
     });
@@ -929,8 +1156,8 @@ export default class FoundationTestScene extends Phaser.Scene {
 
     // 1. Dynamic Camera-Anchored Parallax Scrolling
     this.bgSkyGradient.x = camX + width / 2;
-    if (this.bgMoon) {
-      this.bgMoon.x = camX * 0.05 + width / 2 + 120;
+    if (this.bgCityMatte) {
+      this.bgCityMatte.x = camX * 0.05 + width / 2;
     }
 
     if (!isReduced) {
@@ -990,6 +1217,7 @@ export default class FoundationTestScene extends Phaser.Scene {
     }
 
     // 4. Update Hazard Systems
+    if (this.laserGate0) this.laserGate0.update(time, delta);
     if (this.laserGate1) this.laserGate1.update(time, delta);
     if (this.laserGate2) this.laserGate2.update(time, delta);
     if (this.rotatingBlade1) this.rotatingBlade1.update(time, delta);
@@ -1002,24 +1230,25 @@ export default class FoundationTestScene extends Phaser.Scene {
         if (p.active && p.update) p.update(time, delta);
       });
     }
-    if (this.plasmaTurret2 && this.plasmaTurret2.projectiles) {
-      this.plasmaTurret2.projectiles.getChildren().forEach(p => {
-        if (p.active && p.update) p.update(time, delta);
-      });
+
+    if (this.chronoCore) {
+      this.chronoCore.update(time, delta, this.player);
     }
 
     // 5. Update HUD
     if (this.hud && this.player) {
-      this.hud.update(this.player, this.countdownSeconds, this.score, this.currentSectionName);
+      this.hud.update(this.player, this.countdownSeconds, this.score, this.currentSectionName, this.coreFragmentsCollected);
     }
 
     // 6. Diagnostics Readout (if toggled)
     if (this.debugVisible && this.diagText && this.game.loop && this.player) {
       const p1Count = this.plasmaTurret1 ? this.plasmaTurret1.projectiles.getLength() : 0;
-      const p2Count = this.plasmaTurret2 ? this.plasmaTurret2.projectiles.getLength() : 0;
+      const coreState = this.chronoCore ? this.chronoCore.state : 'N/A';
+      const aCal = this.chronoCore && this.chronoCore.pylonAlpha.isCalibrated ? 'CALIBRATED' : 'WAITING';
+      const bCal = this.chronoCore && this.chronoCore.pylonBeta.isCalibrated ? 'CALIBRATED' : 'WAITING';
 
       const lines = [
-        `[PHASE 5 LEVEL & MATHEMATICAL DIAGNOSTICS]`,
+        `[PHASE 10 LEVEL & MATHEMATICAL DIAGNOSTICS]`,
         `FPS: ${Math.round(this.game.loop.actualFps)} / 60 | Score: ${this.score}`,
         `Current Zone: ${this.currentSectionName} | Checkpoint: CP-${this.latestCheckpoint.sectionId}`,
         `Player Vector: x:${Math.round(this.player.x)}, y:${Math.round(this.player.y)} | Facing: ${this.player.facing}`,
@@ -1027,10 +1256,40 @@ export default class FoundationTestScene extends Phaser.Scene {
         `Jump Apex Reach: ~416px | Dash Vector: ${this.player.isDashing ? '800 px/s' : 'IDLE'}`,
         `Laser 1 [${this.laserGate1.state}] | Laser 2 [${this.laserGate2.state}]`,
         `Blade 1: ${Math.round(this.rotatingBlade1.currentAngle)}° | Blade 2: ${Math.round(this.rotatingBlade2.currentAngle)}°`,
-        `Active Projectiles: ${p1Count + p2Count} | Drone X: ${Math.round(this.drone1.x)}`,
+        `Core State: [${coreState}] | Pylon α: ${aCal} | Pylon β: ${bCal}`,
+        `Active Projectiles: ${p1Count} | Drone X: ${Math.round(this.drone1.x)}`,
         `Countdown: ${this.countdownSeconds}s | Core Stabilized: ${this.isLevelComplete ? 'YES' : 'NO'}`
       ];
       this.diagText.setText(lines);
     }
+  }
+
+  onWindowResize(gameSize) {
+    const w = gameSize.width;
+    const h = gameSize.height;
+    const baseH = Math.max(720, h);
+
+    this.cameras.main.setViewport(0, 0, w, h);
+    this.cameras.main.setBounds(0, 0, 5120, baseH);
+    this.physics.world.setBounds(0, 0, 5120, baseH + 100);
+
+    if (this.hud && this.hud.handleResize) {
+      this.hud.handleResize(w, h);
+    }
+    if (this.bgSkyGradient) {
+      this.bgSkyGradient.setDisplaySize(w + 300, baseH + 100);
+      this.bgSkyGradient.y = baseH / 2;
+    }
+    if (this.bgCityMatte) {
+      this.bgCityMatte.setScale(Math.max(1.18, w / 1280));
+      this.bgCityMatte.y = baseH / 2;
+    }
+    if (this.bgRightTower) {
+      this.bgRightTower.setPosition(w, h / 2);
+    }
+    if (this.bgSkyline) this.bgSkyline.setSize(w + 200, 400);
+    if (this.bgCloudsBack) this.bgCloudsBack.setSize(w + 200, 280);
+    if (this.bgCity) this.bgCity.setSize(w + 200, 450);
+    if (this.bgCloudsFront) this.bgCloudsFront.setSize(w + 200, 280);
   }
 }

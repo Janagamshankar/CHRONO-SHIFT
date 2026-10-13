@@ -191,6 +191,15 @@ class AudioManager {
         case 'cellPickup':
           this.synthCellPickup(now);
           break;
+        case 'pylonCalibrate':
+          this.synthPylonCalibrate(now);
+          break;
+        case 'corePulse':
+          this.synthCorePulse(now);
+          break;
+        case 'barrierHum':
+          this.synthBarrierHum(now);
+          break;
         case 'coreStabilize':
           this.synthCoreStabilize(now);
           break;
@@ -540,6 +549,53 @@ class AudioManager {
       osc.start(t + idx * 0.08);
       osc.stop(t + 0.4);
     });
+  }
+
+  synthPylonCalibrate(t) {
+    // Ascending harmonic chime: C5 -> E5 -> G5 -> C6
+    const notes = [523.25, 659.25, 783.99, 1046.50];
+    notes.forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t + idx * 0.07);
+      gain.gain.setValueAtTime(0.24, t + idx * 0.07);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5 + idx * 0.07);
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+      osc.start(t + idx * 0.07);
+      osc.stop(t + 0.7);
+    });
+  }
+
+  synthCorePulse(t) {
+    // Deep spatial sub-bass reactor sweep
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(140, t);
+    osc.frequency.exponentialRampToValueAtTime(36, t + 0.45);
+    gain.gain.setValueAtTime(0.28, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+    osc.start(t);
+    osc.stop(t + 0.52);
+  }
+
+  synthBarrierHum(t) {
+    // High-voltage electromagnetic barrier engagement
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(220, t);
+    osc.frequency.exponentialRampToValueAtTime(110, t + 0.3);
+    gain.gain.setValueAtTime(0.14, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+    osc.start(t);
+    osc.stop(t + 0.38);
   }
 
   synthCoreStabilize(t) {

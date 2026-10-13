@@ -6,13 +6,16 @@ export class LaserGate {
   /**
    * Timed Laser Gate Hazard
    * Cycles through: CHARGING (warning) -> ACTIVE (lethal beam) -> COOLING (inactive)
+   * Supports both horizontal suspended gate (matching reference) and vertical gate.
    */
   constructor(scene, x, y, config = {}) {
     this.scene = scene;
     this.x = x;
     this.y = y;
 
-    this.height = config.height || 160;
+    this.isHorizontal = config.horizontal !== undefined ? config.horizontal : false;
+    this.width = config.width || (this.isHorizontal ? 220 : 36);
+    this.height = config.height || (this.isHorizontal ? 96 : 160);
     this.chargeMs = config.chargeMs || 1200;
     this.activeMs = config.activeMs || 1800;
     this.coolMs = config.coolMs || 1500;
@@ -26,28 +29,52 @@ export class LaserGate {
     this.stateDuration = 0;
     this.remainingMs = 0;
 
-    // 1. Emitters at top and bottom
-    const halfH = this.height / 2;
-    this.topEmitter = scene.add.image(x, y - halfH, 'hazard_laser_emitter').setDepth(17);
-    this.bottomEmitter = scene.add.image(x, y + halfH, 'hazard_laser_emitter').setDepth(17).setFlipY(true);
+    // Visual graphics for suspension rods, warning tell, and laser beams
+    this.structureGfx = scene.add.graphics().setDepth(15);
+    this.warningGfx = scene.add.graphics().setDepth(16);
+    this.beamGfx = scene.add.graphics().setDepth(17);
 
-    // 2. Visual Graphics for Warning & Beam
-    this.beamGfx = scene.add.graphics().setDepth(16);
-    this.warningGfx = scene.add.graphics().setDepth(15);
+    if (this.isHorizontal) {
+      // Suspended Pod Chassis Sprite
+      this.podSprite = scene.add.image(x, y, 'hazard_suspended_gate').setDepth(18);
 
-    // 3. Authoritative Arcade Physics Hitbox
-    this.hitbox = scene.physics.add.sprite(x, y, null);
-    this.hitbox.setVisible(false);
-    this.hitbox.body.setSize(12, this.height - 24);
-    this.hitbox.body.setAllowGravity(false);
-    this.hitbox.body.setImmovable(true);
-    this.hitbox.body.enable = false; // Disabled by default until ACTIVE
+      // Render vertical suspension rods ascending to ceiling
+      this.structureGfx.lineStyle(2.5, 0x94a3b8, 0.9);
+      this.structureGfx.lineBetween(x - 52, 0, x - 52, y - 48);
+      this.structureGfx.lineBetween(x + 52, 0, x + 52, y - 48);
+      this.structureGfx.lineStyle(1.5, 0xffffff, 0.95);
+      this.structureGfx.lineBetween(x - 52, 0, x - 52, y - 48);
+      this.structureGfx.lineBetween(x + 52, 0, x + 52, y - 48);
+
+      // Arcade Physics Hitbox (horizontal lethal zone)
+      this.hitbox = scene.physics.add.sprite(x, y, null);
+      this.hitbox.setVisible(false);
+      this.hitbox.body.setSize(170, 56);
+      this.hitbox.body.setAllowGravity(false);
+      this.hitbox.body.setImmovable(true);
+      this.hitbox.body.enable = false;
+    } else {
+      // Vertical Emitters at top and bottom
+      const halfH = this.height / 2;
+      this.topEmitter = scene.add.image(x, y - halfH, 'hazard_laser_emitter').setDepth(18);
+      this.bottomEmitter = scene.add.image(x, y + halfH, 'hazard_laser_emitter').setDepth(18).setFlipY(true);
+
+      // Arcade Physics Hitbox (vertical lethal zone)
+      this.hitbox = scene.physics.add.sprite(x, y, null);
+      this.hitbox.setVisible(false);
+      this.hitbox.body.setSize(16, this.height - 24);
+      this.hitbox.body.setAllowGravity(false);
+      this.hitbox.body.setImmovable(true);
+      this.hitbox.body.enable = false;
+    }
 
     // Link hazard reference
     this.hitbox.parentHazard = this;
 
-    // 4. Start cycling with optional initial delay
-    if (this.delayMs > 0) {
+    // Start cycling with optional initial delay or immediate active state
+    if (config.startActive) {
+      this.startActive();
+    } else if (this.delayMs > 0) {
       this.cycleTimer = scene.time.delayedCall(this.delayMs, () => this.startCharging());
     } else {
       this.startCharging();
@@ -62,9 +89,12 @@ export class LaserGate {
     this.hitbox.body.enable = false;
     this.beamGfx.clear();
 
-    // Pulse warning light on emitters
-    this.topEmitter.setTint(0xf59e0b);
-    this.bottomEmitter.setTint(0xf59e0b);
+    if (this.podSprite) {
+      this.podSprite.setTint(0xfde68a);
+    } else {
+      if (this.topEmitter) this.topEmitter.setTint(0xf59e0b);
+      if (this.bottomEmitter) this.bottomEmitter.setTint(0xf59e0b);
+    }
 
     // Hazard audio tell (proximity constrained)
     const cam = this.scene.cameras.main;
@@ -85,8 +115,14 @@ export class LaserGate {
     this.stateDuration = this.activeMs;
     this.hitbox.body.enable = true; // Lethal damage active!
 
-    this.topEmitter.setTint(0xef4444);
-    this.bottomEmitter.setTint(0xef4444);
+    if (this.podSprite) {
+      this.podSprite.clearTint();
+    } else {
+      if (this.topEmitter) this.topEmitter.setTint(0xef4444);
+      if (this.bottomEmitter) this.bottomEmitter.setTint(0xef4444);
+    }
+
+    this.renderActiveBeams();
 
     // Hazard audio fire hum (proximity constrained)
     const cam = this.scene.cameras.main;
@@ -96,21 +132,58 @@ export class LaserGate {
     }
 
     // Spark burst at emitters
-    for (let i = 0; i < 3; i++) {
-      const pTop = this.scene.add.image(this.x, this.y - this.height / 2 + 10, 'particle_cyan').setScale(0.4).setTint(0xef4444);
-      pTop.setDepth(18);
+    for (let i = 0; i < 4; i++) {
+      const sparkX = this.isHorizontal ? this.x + Phaser.Math.Between(-80, 80) : this.x;
+      const sparkY = this.isHorizontal ? this.y + Phaser.Math.Between(-20, 20) : this.y - this.height / 2 + 10;
+      const p = this.scene.add.image(sparkX, sparkY, 'particle_cyan').setScale(0.4).setTint(0xf97316);
+      p.setDepth(19);
       this.scene.tweens.add({
-        targets: pTop,
-        x: this.x + Phaser.Math.Between(-15, 15),
+        targets: p,
         alpha: 0,
+        scale: 0.1,
         duration: 180,
-        onComplete: () => pTop.destroy()
+        onComplete: () => p.destroy()
       });
     }
 
     this.cycleTimer = this.scene.time.delayedCall(this.activeMs, () => {
       this.startCooling();
     });
+  }
+
+  renderActiveBeams() {
+    this.warningGfx.clear();
+    this.beamGfx.clear();
+
+    if (this.isHorizontal) {
+      const leftX = this.x - 86;
+      const rightX = this.x + 86;
+      const beamYs = [this.y - 20, this.y - 7, this.y + 7, this.y + 20];
+
+      // Inner chamber orange volumetric plasma glow (Reference Recreation)
+      this.beamGfx.fillStyle(0xf97316, 0.18);
+      this.beamGfx.fillRect(leftX, this.y - 24, rightX - leftX, 48);
+
+      beamYs.forEach(by => {
+        // Outer coral/orange glow beam
+        this.beamGfx.lineStyle(10, 0xf97316, 0.55);
+        this.beamGfx.lineBetween(leftX, by, rightX, by);
+        // Mid beam
+        this.beamGfx.lineStyle(5, 0xef4444, 0.95);
+        this.beamGfx.lineBetween(leftX, by, rightX, by);
+        // Lethal white core filament
+        this.beamGfx.lineStyle(2, 0xffffff, 1.0);
+        this.beamGfx.lineBetween(leftX, by, rightX, by);
+      });
+    } else {
+      const halfH = this.height / 2;
+      this.beamGfx.lineStyle(14, 0xf97316, 0.45);
+      this.beamGfx.lineBetween(this.x, this.y - halfH + 8, this.x, this.y + halfH - 8);
+      this.beamGfx.lineStyle(6, 0xef4444, 0.85);
+      this.beamGfx.lineBetween(this.x, this.y - halfH + 8, this.x, this.y + halfH - 8);
+      this.beamGfx.lineStyle(2, 0xffffff, 1.0);
+      this.beamGfx.lineBetween(this.x, this.y - halfH + 8, this.x, this.y + halfH - 8);
+    }
   }
 
   startCooling() {
@@ -122,8 +195,9 @@ export class LaserGate {
     this.beamGfx.clear();
     this.warningGfx.clear();
 
-    this.topEmitter.clearTint();
-    this.bottomEmitter.clearTint();
+    if (this.podSprite) this.podSprite.clearTint();
+    if (this.topEmitter) this.topEmitter.clearTint();
+    if (this.bottomEmitter) this.bottomEmitter.clearTint();
 
     this.cycleTimer = this.scene.time.delayedCall(this.coolMs, () => {
       this.startCharging();
@@ -133,36 +207,44 @@ export class LaserGate {
   update(time, delta) {
     if (this.isFrozen) return;
 
-    const halfH = this.height / 2;
+    if (this.isHorizontal) {
+      const leftX = this.x - 86;
+      const rightX = this.x + 86;
+      const beamYs = [this.y - 20, this.y - 7, this.y + 7, this.y + 20];
 
-    if (this.state === 'CHARGING') {
-      // Draw pulsing warning laser filament
-      this.warningGfx.clear();
-      const elapsed = time - this.stateStartTime;
-      const progress = Math.min(1, elapsed / this.stateDuration);
-      const pulseAlpha = 0.35 + Math.sin(time * 0.02) * 0.25 + progress * 0.4;
+      if (this.state === 'CHARGING') {
+        this.warningGfx.clear();
+        const elapsed = time - this.stateStartTime;
+        const progress = Math.min(1, elapsed / this.stateDuration);
+        const pulseAlpha = 0.35 + Math.sin(time * 0.02) * 0.25 + progress * 0.4;
 
-      this.warningGfx.lineStyle(1.5, 0xf59e0b, pulseAlpha);
-      this.warningGfx.lineBetween(this.x, this.y - halfH + 8, this.x, this.y + halfH - 8);
-    } else if (this.state === 'ACTIVE') {
-      // Draw high-energy lethal laser beam
-      this.warningGfx.clear();
-      this.beamGfx.clear();
-
-      // Outer glow beam
-      this.beamGfx.lineStyle(14, 0xef4444, 0.4);
-      this.beamGfx.lineBetween(this.x, this.y - halfH + 8, this.x, this.y + halfH - 8);
-
-      // Mid laser beam
-      this.beamGfx.lineStyle(6, 0xf59e0b, 0.85);
-      this.beamGfx.lineBetween(this.x, this.y - halfH + 8, this.x, this.y + halfH - 8);
-
-      // Lethal core filament
-      this.beamGfx.lineStyle(2, 0xffffff, 1.0);
-      this.beamGfx.lineBetween(this.x, this.y - halfH + 8, this.x, this.y + halfH - 8);
+        this.warningGfx.lineStyle(1.5, 0xf97316, pulseAlpha);
+        beamYs.forEach(by => {
+          this.warningGfx.lineBetween(leftX, by, rightX, by);
+        });
+      } else if (this.state === 'ACTIVE') {
+        this.renderActiveBeams();
+      } else {
+        this.warningGfx.clear();
+        this.beamGfx.clear();
+      }
     } else {
-      this.warningGfx.clear();
-      this.beamGfx.clear();
+      const halfH = this.height / 2;
+
+      if (this.state === 'CHARGING') {
+        this.warningGfx.clear();
+        const elapsed = time - this.stateStartTime;
+        const progress = Math.min(1, elapsed / this.stateDuration);
+        const pulseAlpha = 0.35 + Math.sin(time * 0.02) * 0.25 + progress * 0.4;
+
+        this.warningGfx.lineStyle(1.5, 0xf97316, pulseAlpha);
+        this.warningGfx.lineBetween(this.x, this.y - halfH + 8, this.x, this.y + halfH - 8);
+      } else if (this.state === 'ACTIVE') {
+        this.renderActiveBeams();
+      } else {
+        this.warningGfx.clear();
+        this.beamGfx.clear();
+      }
     }
   }
 
@@ -185,17 +267,35 @@ export class LaserGate {
     this.hitbox.body.enable = false;
 
     // Apply cyan frost aesthetics
-    this.topEmitter.setTint(0x00f0ff);
-    this.bottomEmitter.setTint(0x00f0ff);
+    if (this.isHorizontal) {
+      if (this.podSprite) this.podSprite.setTint(0x00f0ff);
+    } else {
+      if (this.topEmitter) this.topEmitter.setTint(0x00f0ff);
+      if (this.bottomEmitter) this.bottomEmitter.setTint(0x00f0ff);
+    }
 
     if (this.state === 'ACTIVE') {
       // Render frozen crystallized laser beam
-      const halfH = this.height / 2;
       this.beamGfx.clear();
-      this.beamGfx.lineStyle(10, 0x00f0ff, 0.5);
-      this.beamGfx.lineBetween(this.x, this.y - halfH + 8, this.x, this.y + halfH - 8);
-      this.beamGfx.lineStyle(2, 0xffffff, 0.9);
-      this.beamGfx.lineBetween(this.x, this.y - halfH + 8, this.x, this.y + halfH - 8);
+      if (this.isHorizontal) {
+        const leftX = this.x - 86;
+        const rightX = this.x + 86;
+        const beamYs = [this.y - 20, this.y - 7, this.y + 7, this.y + 20];
+        this.beamGfx.fillStyle(0x00f0ff, 0.2);
+        this.beamGfx.fillRect(leftX, this.y - 24, rightX - leftX, 48);
+        beamYs.forEach(by => {
+          this.beamGfx.lineStyle(4, 0x00f0ff, 0.7);
+          this.beamGfx.lineBetween(leftX, by, rightX, by);
+          this.beamGfx.lineStyle(1.5, 0xffffff, 0.9);
+          this.beamGfx.lineBetween(leftX, by, rightX, by);
+        });
+      } else {
+        const halfH = this.height / 2;
+        this.beamGfx.lineStyle(10, 0x00f0ff, 0.5);
+        this.beamGfx.lineBetween(this.x, this.y - halfH + 8, this.x, this.y + halfH - 8);
+        this.beamGfx.lineStyle(2, 0xffffff, 0.9);
+        this.beamGfx.lineBetween(this.x, this.y - halfH + 8, this.x, this.y + halfH - 8);
+      }
     }
 
     // Freeze crystal node
@@ -216,25 +316,33 @@ export class LaserGate {
     }
     ChronoVFX.spawnFreezeRelease(this.scene, this.x, this.y);
 
+    if (this.isHorizontal) {
+      if (this.podSprite) this.podSprite.clearTint();
+    } else {
+      if (this.topEmitter) this.topEmitter.clearTint();
+      if (this.bottomEmitter) this.bottomEmitter.clearTint();
+    }
+
     // Resume cycle from remaining time in current state
     if (this.state === 'CHARGING') {
-      this.topEmitter.setTint(0xf59e0b);
-      this.bottomEmitter.setTint(0xf59e0b);
+      if (this.topEmitter) this.topEmitter.setTint(0xf59e0b);
+      if (this.bottomEmitter) this.bottomEmitter.setTint(0xf59e0b);
       this.cycleTimer = this.scene.time.delayedCall(this.remainingMs, () => this.startActive());
     } else if (this.state === 'ACTIVE') {
       this.hitbox.body.enable = true;
-      this.topEmitter.setTint(0xef4444);
-      this.bottomEmitter.setTint(0xef4444);
+      if (this.topEmitter) this.topEmitter.setTint(0xef4444);
+      if (this.bottomEmitter) this.bottomEmitter.setTint(0xef4444);
       this.cycleTimer = this.scene.time.delayedCall(this.remainingMs, () => this.startCooling());
     } else {
-      this.topEmitter.clearTint();
-      this.bottomEmitter.clearTint();
+      if (this.topEmitter) this.topEmitter.clearTint();
+      if (this.bottomEmitter) this.bottomEmitter.clearTint();
       this.cycleTimer = this.scene.time.delayedCall(this.remainingMs, () => this.startCharging());
     }
   }
 
   destroy() {
     if (this.cycleTimer) this.cycleTimer.remove();
+    if (this.podSprite) this.podSprite.destroy();
     if (this.topEmitter) this.topEmitter.destroy();
     if (this.bottomEmitter) this.bottomEmitter.destroy();
     if (this.beamGfx) this.beamGfx.destroy();

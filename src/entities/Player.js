@@ -198,4 +198,186 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     ChronoVFX.spawnEnergyCollectBurst(this.scene, this.x, this.y);
     return this.energy;
   }
+
+  /**
+   * Authoritative hazard damage handler
+   * Prevents repeated damage spam via invulnerability window
+   * Respects Chrono Dash invulnerability phase
+   */
+  takeDamage(amount = 25, knockbackX = 0, knockbackY = -220) {
+    // Guards: invulnerable, already dead, or phasing via Chrono Dash
+    if (this.isInvulnerable || this.isDead || this.health <= 0) {
+      return false;
+    }
+
+    if (this.isDashing) {
+      // Chrono Dash phases safely through hazards
+      return false;
+    }
+
+    // Deduct health
+    this.health = Math.max(0, this.health - amount);
+    this.isInvulnerable = true;
+
+    // Visual & audio feedback
+    ChronoVFX.spawnDamageImpact(this.scene, this.x, this.y);
+
+    // Red impact tint
+    this.setTint(0xef4444);
+    this.scene.time.delayedCall(140, () => {
+      if (!this.isDead) this.clearTint();
+    });
+
+    // Knockback physics
+    const kbX = knockbackX !== 0 ? knockbackX : -this.facing * 180;
+    this.setVelocity(kbX, knockbackY);
+
+    if (this.health <= 0) {
+      this.die();
+      return true;
+    }
+
+    // Flashing invulnerability indicator
+    if (this.flashTween) this.flashTween.stop();
+    this.flashTween = this.scene.tweens.add({
+      targets: this,
+      alpha: 0.35,
+      yoyo: true,
+      repeat: 5,
+      duration: 100,
+      onComplete: () => {
+        this.setAlpha(1);
+      }
+    });
+
+    // Invulnerability window timer
+    if (this.invulnTimer) this.invulnTimer.remove();
+    this.invulnTimer = this.scene.time.delayedCall(GAME_SETTINGS.PLAYER.INVULNERABILITY_MS, () => {
+      this.isInvulnerable = false;
+      this.setAlpha(1);
+    });
+
+    return true;
+  }
+
+  /**
+   * Handles player death sequence cleanly
+   */
+  die() {
+    this.isDead = true;
+    this.setVelocity(0, 0);
+    this.body.setAllowGravity(false);
+    this.body.enable = false;
+
+    // Death shatter particles
+    for (let i = 0; i < 12; i++) {
+      const p = this.scene.add.image(this.x, this.y, 'particle_purple').setDepth(25);
+      p.setTint(0xef4444);
+      p.setScale(Phaser.Math.FloatBetween(0.8, 1.4));
+      const angle = (i / 12) * Math.PI * 2;
+      const dist = Phaser.Math.Between(40, 110);
+
+      this.scene.tweens.add({
+        targets: p,
+        x: this.x + Math.cos(angle) * dist,
+        y: this.y + Math.sin(angle) * dist,
+        alpha: 0,
+        scale: 0.1,
+        duration: 500,
+        ease: 'Cubic.easeOut',
+        onComplete: () => p.destroy()
+      });
+    }
+
+    // Fade out avatar
+    this.scene.tweens.add({
+      targets: this,
+      alpha: 0,
+      scaleX: 0.2,
+      scaleY: 0.2,
+      duration: 400,
+      ease: 'Quad.easeIn'
+    });
+
+    // Show respawn banner anchored to camera viewport
+    const cam = this.scene.cameras.main;
+    const deathBanner = this.scene.add.text(
+      cam.scrollX + cam.width / 2,
+      cam.scrollY + cam.height / 2 - 30,
+      'TEMPORAL DISRUPTION — REBOOTING MATRIX',
+      {
+        fontFamily: 'Orbitron, sans-serif',
+        fontSize: '22px',
+        fontStyle: 'bold',
+        color: '#ef4444',
+        letterSpacing: 3
+      }
+    ).setOrigin(0.5).setDepth(45);
+
+    this.scene.tweens.add({
+      targets: deathBanner,
+      alpha: 0.3,
+      yoyo: true,
+      repeat: 3,
+      duration: 180,
+      onComplete: () => deathBanner.destroy()
+    });
+
+    // Notify scene to respawn at latest checkpoint or restart
+    this.scene.time.delayedCall(1200, () => {
+      if (this.scene.handlePlayerDeath) {
+        this.scene.handlePlayerDeath();
+      } else {
+        this.scene.scene.restart();
+      }
+    });
+  }
+
+  /**
+   * Respawns the player cleanly at the specified checkpoint coordinates
+   */
+  respawnAt(x, y) {
+    this.isDead = false;
+    this.x = x;
+    this.y = y;
+    this.setVelocity(0, 0);
+    this.body.setAllowGravity(true);
+    this.body.enable = true;
+    this.setAlpha(1);
+    this.setScale(1);
+    this.clearTint();
+    this.health = GAME_SETTINGS.PLAYER.MAX_HEALTH;
+    this.isInvulnerable = true;
+
+    // Temporal arrival shockwave ring
+    const ring = this.scene.add.image(this.x, this.y, 'vfx_shockwave_ring').setDepth(24);
+    ring.setScale(0.15).setTint(0x00f0ff);
+    this.scene.tweens.add({
+      targets: ring,
+      scale: 2.2,
+      alpha: 0,
+      duration: 350,
+      ease: 'Cubic.easeOut',
+      onComplete: () => ring.destroy()
+    });
+
+    // Temporary invulnerability blinking (1500ms grace period)
+    if (this.flashTween) this.flashTween.stop();
+    this.flashTween = this.scene.tweens.add({
+      targets: this,
+      alpha: 0.4,
+      yoyo: true,
+      repeat: 6,
+      duration: 110,
+      onComplete: () => {
+        this.setAlpha(1);
+      }
+    });
+
+    if (this.invulnTimer) this.invulnTimer.remove();
+    this.invulnTimer = this.scene.time.delayedCall(1500, () => {
+      this.isInvulnerable = false;
+      this.setAlpha(1);
+    });
+  }
 }

@@ -215,4 +215,98 @@ export class ChronoVFX {
       onComplete: () => text.destroy()
     });
   }
+
+  /**
+   * Spawns damage impact flash and sparks when player is hit
+   */
+  static spawnDamageImpact(scene, x, y) {
+    const isReduced = settingsManager.get('reducedMotion');
+
+    // 1. Red/amber hit sparks (4 sparks)
+    for (let i = 0; i < 4; i++) {
+      const spark = scene.add.image(x, y, 'vfx_hit_spark').setDepth(26);
+      spark.setScale(1.2);
+      const angle = (i / 4) * Math.PI * 2 + Phaser.Math.FloatBetween(-0.3, 0.3);
+      const dist = Phaser.Math.Between(25, 60);
+
+      scene.tweens.add({
+        targets: spark,
+        x: x + Math.cos(angle) * dist,
+        y: y + Math.sin(angle) * dist,
+        alpha: 0,
+        scale: 0.3,
+        duration: 220,
+        ease: 'Cubic.easeOut',
+        onComplete: () => spark.destroy()
+      });
+    }
+
+    // 2. Camera impulse on hit
+    if (!isReduced && scene.cameras && scene.cameras.main) {
+      scene.cameras.main.shake(140, 0.007);
+    }
+  }
+
+  /**
+   * Spawns plasma projectile impact explosion
+   */
+  static spawnProjectileExplosion(scene, x, y) {
+    // 1. Expanding energy blast ring
+    const blast = scene.add.image(x, y, 'vfx_shockwave_ring').setDepth(24);
+    blast.setScale(0.1);
+    blast.setTint(0xef4444);
+    blast.setAlpha(0.9);
+
+    scene.tweens.add({
+      targets: blast,
+      scale: 1.0,
+      alpha: 0,
+      duration: 200,
+      ease: 'Quad.easeOut',
+      onComplete: () => blast.destroy()
+    });
+
+    // 2. Dispersing plasma sparks
+    for (let i = 0; i < 5; i++) {
+      const p = scene.add.image(x, y, 'particle_cyan').setDepth(24);
+      p.setTint(0xf59e0b);
+      p.setScale(0.6);
+      const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+      const dist = Phaser.Math.Between(15, 45);
+
+      scene.tweens.add({
+        targets: p,
+        x: x + Math.cos(angle) * dist,
+        y: y + Math.sin(angle) * dist,
+        alpha: 0,
+        scale: 0.1,
+        duration: 220,
+        ease: 'Cubic.easeOut',
+        onComplete: () => p.destroy()
+      });
+    }
+  }
+
+  /**
+   * Spawns platform crumble / collapse warning dust
+   */
+  static spawnPlatformDust(scene, x, y, width = 80) {
+    for (let i = 0; i < 4; i++) {
+      const px = x - width / 2 + (i / 3) * width;
+      const p = scene.add.image(px, y, 'particle_cyan').setDepth(16);
+      p.setTint(0xf59e0b);
+      p.setScale(0.5);
+      p.setAlpha(0.7);
+
+      scene.tweens.add({
+        targets: p,
+        y: y + Phaser.Math.Between(10, 30),
+        alpha: 0,
+        scale: 0.1,
+        duration: 350,
+        ease: 'Quad.easeIn',
+        onComplete: () => p.destroy()
+      });
+    }
+  }
 }

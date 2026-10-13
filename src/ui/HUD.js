@@ -7,6 +7,7 @@ export class HUD {
     const { width, height } = scene.scale;
 
     this.container = scene.add.container(0, 0).setDepth(40);
+    this.container.setScrollFactor(0); // Anchors HUD to screen viewport
 
     // 1. Top Left: Operative Vitals Frame
     const vitalsX = 24;
@@ -73,7 +74,45 @@ export class HUD {
       letterSpacing: 3
     }).setOrigin(0.5);
 
-    // 3. Bottom Right: Ability Action Indicators
+    // 3. Top Right: Score & Section Progression Card
+    const scoreX = width - 240;
+    const scoreY = 20;
+
+    const scoreBg = scene.add.graphics();
+    scoreBg.fillStyle(0x070c1b, 0.88);
+    scoreBg.fillRoundedRect(scoreX, scoreY, 216, 72, 6);
+    scoreBg.lineStyle(1.5, 0x1e293b, 0.8);
+    scoreBg.strokeRoundedRect(scoreX, scoreY, 216, 72, 6);
+
+    const scoreTitle = scene.add.text(scoreX + 16, scoreY + 12, 'SCORE', {
+      fontFamily: 'Orbitron, sans-serif',
+      fontSize: '11px',
+      fontStyle: 'bold',
+      color: '#00f0ff'
+    });
+
+    this.scoreText = scene.add.text(scoreX + 200, scoreY + 10, '0000', {
+      fontFamily: 'Orbitron, monospace',
+      fontSize: '16px',
+      fontStyle: 'bold',
+      color: '#e2e8f0'
+    }).setOrigin(1, 0);
+
+    const sectionTitle = scene.add.text(scoreX + 16, scoreY + 42, 'ZONE', {
+      fontFamily: 'Rajdhani, sans-serif',
+      fontSize: '11px',
+      fontWeight: '700',
+      color: '#94a3b8'
+    });
+
+    this.sectionText = scene.add.text(scoreX + 200, scoreY + 40, 'SEC A: AWAKENING', {
+      fontFamily: 'Rajdhani, sans-serif',
+      fontSize: '13px',
+      fontWeight: '700',
+      color: '#38bdf8'
+    }).setOrigin(1, 0);
+
+    // 4. Bottom Right: Ability Action Indicators
     const abX = width - 200;
     const abY = height - 56;
 
@@ -102,6 +141,11 @@ export class HUD {
       timerBg,
       timerHeader,
       this.timerText,
+      scoreBg,
+      scoreTitle,
+      this.scoreText,
+      sectionTitle,
+      this.sectionText,
       this.freezeBadge.container,
       this.dashBadge.container,
       this.notifyText
@@ -149,7 +193,7 @@ export class HUD {
     return { container, bg, keyBox, title, costTxt, badgeWidth, badgeHeight };
   }
 
-  update(player, countdownSeconds) {
+  update(player, countdownSeconds, score = 0, currentSection = 'SEC A: AWAKENING') {
     if (!player) return;
 
     const barW = 120;
@@ -185,7 +229,11 @@ export class HUD {
       this.timerText.setColor('#00f0ff');
     }
 
-    // 4. Ability badges availability state
+    // 4. Score & Section
+    this.scoreText.setText(String(score).padStart(4, '0'));
+    this.sectionText.setText(currentSection);
+
+    // 5. Ability badges availability state
     this.updateBadgeState(this.freezeBadge, player.energy >= GAME_SETTINGS.CHRONO.FREEZE_COST);
     this.updateBadgeState(this.dashBadge, player.energy >= GAME_SETTINGS.CHRONO.DASH_COST);
   }
@@ -222,7 +270,6 @@ export class HUD {
         ease: 'Cubic.easeOut'
       });
     } else {
-      // Rejection feedback: shake and flash warning
       this.scene.tweens.add({
         targets: badge.container,
         x: badge.container.x - 6,
@@ -241,5 +288,128 @@ export class HUD {
         duration: 350
       });
     }
+  }
+
+  /**
+   * Displays victory level completion overlay
+   */
+  showVictoryOverlay(stats = {}) {
+    const { width, height } = this.scene.scale;
+    const overlay = this.scene.add.container(width / 2, height / 2).setDepth(60);
+    overlay.setScrollFactor(0);
+
+    // Dim background
+    const bgDim = this.scene.add.graphics();
+    bgDim.fillStyle(0x040714, 0.92);
+    bgDim.fillRect(-width / 2, -height / 2, width, height);
+
+    // Victory modal card
+    const cardW = 600;
+    const cardH = 420;
+    const card = this.scene.add.graphics();
+    card.fillStyle(0x0a1128, 0.96);
+    card.fillRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 8);
+    card.lineStyle(2, 0x00f0ff, 0.9);
+    card.strokeRoundedRect(-cardW / 2, -cardH / 2, cardW, cardH, 8);
+
+    // Header
+    const title = this.scene.add.text(0, -cardH / 2 + 45, 'TEMPORAL MATRIX STABILIZED', {
+      fontFamily: 'Orbitron, sans-serif',
+      fontSize: '24px',
+      fontStyle: 'bold',
+      color: '#00f0ff',
+      letterSpacing: 3
+    }).setOrigin(0.5);
+
+    const subtitle = this.scene.add.text(0, -cardH / 2 + 75, 'AETHELON CITY CHRONO CORE SECURED • TIMELINE RESTORED', {
+      fontFamily: 'Rajdhani, sans-serif',
+      fontSize: '13px',
+      fontWeight: '700',
+      color: '#94a3b8',
+      letterSpacing: 2
+    }).setOrigin(0.5);
+
+    // Stats Grid
+    const statBox = this.scene.add.graphics();
+    statBox.fillStyle(0x060b1c, 0.8);
+    statBox.fillRoundedRect(-cardW / 2 + 30, -70, cardW - 60, 170, 6);
+    statBox.lineStyle(1, 0x1e293b, 0.8);
+    statBox.strokeRoundedRect(-cardW / 2 + 30, -70, cardW - 60, 170, 6);
+
+    const statRows = [
+      { label: 'OPERATIVE SCORE:', val: `${stats.score || 0} PTS` },
+      { label: 'TIME REMAINING:', val: `${stats.timeStr || '02:00'}` },
+      { label: 'CHECKPOINTS ANCHORED:', val: `${stats.checkpoints || 4} / 4` },
+      { label: 'STABILITY RATING:', val: '100% [OPTIMAL]' }
+    ];
+
+    statRows.forEach((r, idx) => {
+      const yPos = -50 + idx * 36;
+      overlay.add(this.scene.add.text(-cardW / 2 + 54, yPos, r.label, {
+        fontFamily: 'Rajdhani, sans-serif',
+        fontSize: '15px',
+        fontWeight: '700',
+        color: '#94a3b8'
+      }));
+      overlay.add(this.scene.add.text(cardW / 2 - 54, yPos, r.val, {
+        fontFamily: 'Orbitron, monospace',
+        fontSize: '15px',
+        fontStyle: 'bold',
+        color: idx === 3 ? '#10b981' : '#e2e8f0'
+      }).setOrigin(1, 0));
+    });
+
+    // Interactive Buttons
+    const btnW = 200;
+    const btnH = 44;
+
+    // Button 1: Replay Mission
+    const btnReplay = this.scene.add.container(-120, 150);
+    const bg1 = this.scene.add.graphics();
+    bg1.fillStyle(0x00f0ff, 1);
+    bg1.fillRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, 4);
+    const txt1 = this.scene.add.text(0, 0, 'REPLAY MISSION', {
+      fontFamily: 'Orbitron, sans-serif',
+      fontSize: '13px',
+      fontStyle: 'bold',
+      color: '#070b16'
+    }).setOrigin(0.5);
+    btnReplay.add([bg1, txt1]);
+    btnReplay.setSize(btnW, btnH);
+    btnReplay.setInteractive({ useHandCursor: true });
+    btnReplay.on('pointerdown', () => {
+      this.scene.scene.restart();
+    });
+
+    // Button 2: Main Menu
+    const btnMenu = this.scene.add.container(120, 150);
+    const bg2 = this.scene.add.graphics();
+    bg2.fillStyle(0x1e293b, 1);
+    bg2.fillRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, 4);
+    bg2.lineStyle(1.5, 0x00f0ff, 0.6);
+    bg2.strokeRoundedRect(-btnW / 2, -btnH / 2, btnW, btnH, 4);
+    const txt2 = this.scene.add.text(0, 0, 'MAIN MENU', {
+      fontFamily: 'Orbitron, sans-serif',
+      fontSize: '13px',
+      fontStyle: 'bold',
+      color: '#e2e8f0'
+    }).setOrigin(0.5);
+    btnMenu.add([bg2, txt2]);
+    btnMenu.setSize(btnW, btnH);
+    btnMenu.setInteractive({ useHandCursor: true });
+    btnMenu.on('pointerdown', () => {
+      this.scene.scene.start('MenuScene');
+    });
+
+    overlay.add([bgDim, card, title, subtitle, statBox, btnReplay, btnMenu]);
+
+    // Fade-in animation
+    overlay.setAlpha(0);
+    this.scene.tweens.add({
+      targets: overlay,
+      alpha: 1,
+      duration: 350,
+      ease: 'Quad.easeOut'
+    });
   }
 }

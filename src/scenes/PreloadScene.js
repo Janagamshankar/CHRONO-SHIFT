@@ -415,6 +415,201 @@ export default class PreloadScene extends Phaser.Scene {
     movPlatGfx.fillRect(4, 2, 88, 3);
     movPlatGfx.generateTexture('moving_platform_tile', 96, 28);
     movPlatGfx.destroy();
+
+    // 20. Collapsing Platform Tile (96x28 with amber warning markers)
+    const colPlatGfx = this.make.graphics({ x: 0, y: 0, add: false });
+    colPlatGfx.fillStyle(0x171626, 1);
+    colPlatGfx.fillRoundedRect(0, 0, 96, 28, 4);
+    colPlatGfx.lineStyle(1.5, 0xf59e0b, 0.9);
+    colPlatGfx.strokeRoundedRect(0, 0, 96, 28, 4);
+    // Amber top rail
+    colPlatGfx.fillStyle(0xf59e0b, 1);
+    colPlatGfx.fillRect(4, 2, 88, 3);
+    // Honeycomb/hazard hash marks
+    colPlatGfx.fillStyle(0xef4444, 0.8);
+    for (let hx = 12; hx < 88; hx += 16) {
+      colPlatGfx.fillTriangle(hx, 10, hx + 8, 10, hx + 4, 18);
+    }
+    colPlatGfx.generateTexture('platform_collapsing', 96, 28);
+    colPlatGfx.destroy();
+
+    // 21. Rotating Blade (64x64 Quad Energy Turbine)
+    const bladeGfx = this.make.graphics({ x: 0, y: 0, add: false });
+    // 4 angular turbine blades
+    bladeGfx.fillStyle(0xf59e0b, 0.9);
+    bladeGfx.lineStyle(1.5, 0xef4444, 1);
+    for (let b = 0; b < 4; b++) {
+      const angle = (b * Math.PI) / 2;
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      const p1x = 32 + cos * 28;
+      const p1y = 32 + sin * 28;
+      const p2x = 32 + Math.cos(angle + 0.35) * 16;
+      const p2y = 32 + Math.sin(angle + 0.35) * 16;
+      const p3x = 32 + Math.cos(angle - 0.35) * 16;
+      const p3y = 32 + Math.sin(angle - 0.35) * 16;
+      bladeGfx.beginPath();
+      bladeGfx.moveTo(32, 32);
+      bladeGfx.lineTo(p2x, p2y);
+      bladeGfx.lineTo(p1x, p1y);
+      bladeGfx.lineTo(p3x, p3y);
+      bladeGfx.closePath();
+      bladeGfx.fillPath();
+      bladeGfx.strokePath();
+    }
+    // Outer blade tip glow dots
+    bladeGfx.fillStyle(0xffffff, 1);
+    bladeGfx.fillCircle(32, 6, 2.5);
+    bladeGfx.fillCircle(32, 58, 2.5);
+    bladeGfx.fillCircle(6, 32, 2.5);
+    bladeGfx.fillCircle(58, 32, 2.5);
+    // Central metallic hub
+    bladeGfx.fillStyle(0x0f172a, 1);
+    bladeGfx.fillCircle(32, 32, 10);
+    bladeGfx.lineStyle(2, 0xef4444, 0.9);
+    bladeGfx.strokeCircle(32, 32, 10);
+    bladeGfx.fillStyle(0xef4444, 1);
+    bladeGfx.fillCircle(32, 32, 4);
+    bladeGfx.generateTexture('hazard_blade_quad', 64, 64);
+    bladeGfx.destroy();
+
+    // 22. Laser Emitter Cap (32x20)
+    const emitGfx = this.make.graphics({ x: 0, y: 0, add: false });
+    emitGfx.fillStyle(0x0f172a, 1);
+    emitGfx.fillRoundedRect(0, 0, 32, 20, 3);
+    emitGfx.lineStyle(1.5, 0xef4444, 0.9);
+    emitGfx.strokeRoundedRect(0, 0, 32, 20, 3);
+    // Emitter aperture lens
+    emitGfx.fillStyle(0xef4444, 0.6);
+    emitGfx.fillCircle(16, 10, 6);
+    emitGfx.fillStyle(0xffffff, 1);
+    emitGfx.fillCircle(16, 10, 2.5);
+    // Warning accent
+    emitGfx.fillStyle(0xf59e0b, 1);
+    emitGfx.fillRect(4, 3, 4, 3);
+    emitGfx.fillRect(24, 3, 4, 3);
+    emitGfx.generateTexture('hazard_laser_emitter', 32, 20);
+    emitGfx.destroy();
+
+    // 23. Plasma Turret Base (32x32)
+    const turretGfx = this.make.graphics({ x: 0, y: 0, add: false });
+    turretGfx.fillStyle(0x111827, 1);
+    turretGfx.fillRoundedRect(4, 4, 24, 24, 4);
+    turretGfx.lineStyle(1.5, 0x00f0ff, 0.7);
+    turretGfx.strokeRoundedRect(4, 4, 24, 24, 4);
+    // Cannon barrel
+    turretGfx.fillStyle(0x1e293b, 1);
+    turretGfx.fillRect(0, 12, 10, 8);
+    turretGfx.lineStyle(1, 0xef4444, 0.9);
+    turretGfx.strokeRect(0, 12, 10, 8);
+    // Core energy cell
+    turretGfx.fillStyle(0xef4444, 1);
+    turretGfx.fillCircle(16, 16, 5);
+    turretGfx.fillStyle(0xffffff, 1);
+    turretGfx.fillCircle(16, 16, 2);
+    turretGfx.generateTexture('hazard_turret', 32, 32);
+    turretGfx.destroy();
+
+    // 24. Patrol Drone Silhouette (40x24)
+    const droneGfx = this.make.graphics({ x: 0, y: 0, add: false });
+    droneGfx.fillStyle(0x0f172a, 1);
+    droneGfx.fillRoundedRect(4, 4, 32, 16, 6);
+    droneGfx.lineStyle(1.5, 0xef4444, 0.85);
+    droneGfx.strokeRoundedRect(4, 4, 32, 16, 6);
+    // Sensor eye optic
+    droneGfx.fillStyle(0xef4444, 1);
+    droneGfx.fillCircle(20, 12, 4);
+    droneGfx.fillStyle(0xffffff, 1);
+    droneGfx.fillCircle(21, 11, 1.5);
+    // Side thruster fins
+    droneGfx.fillStyle(0x38bdf8, 0.9);
+    droneGfx.fillRect(1, 8, 4, 8);
+    droneGfx.fillRect(35, 8, 4, 8);
+    droneGfx.generateTexture('drone_patrol', 40, 24);
+    droneGfx.destroy();
+
+    // 25. Impact Hit Spark (16x16)
+    const hitGfx = this.make.graphics({ x: 0, y: 0, add: false });
+    hitGfx.fillStyle(0xffffff, 1);
+    hitGfx.fillCircle(8, 8, 3);
+    hitGfx.lineStyle(1.5, 0xef4444, 1);
+    hitGfx.lineBetween(8, 0, 8, 16);
+    hitGfx.lineBetween(0, 8, 16, 8);
+    hitGfx.lineStyle(1, 0xf59e0b, 0.8);
+    hitGfx.lineBetween(2, 2, 14, 14);
+    hitGfx.lineBetween(2, 14, 14, 2);
+    hitGfx.generateTexture('vfx_hit_spark', 16, 16);
+    hitGfx.destroy();
+
+    // 26. Checkpoint Beacon (48x72 Holographic Pillar)
+    const cpGfx = this.make.graphics({ x: 0, y: 0, add: false });
+    // Pedestal base
+    cpGfx.fillStyle(0x0a1020, 1);
+    cpGfx.fillRoundedRect(6, 52, 36, 18, 4);
+    cpGfx.lineStyle(1.5, 0x1e293b, 0.9);
+    cpGfx.strokeRoundedRect(6, 52, 36, 18, 4);
+    // Base emitter light
+    cpGfx.fillStyle(0x00f0ff, 0.6);
+    cpGfx.fillCircle(24, 52, 6);
+    // Vertical crystalline pillar
+    cpGfx.fillStyle(0x1e3a8a, 0.7);
+    cpGfx.fillRect(18, 16, 12, 36);
+    cpGfx.lineStyle(1.5, 0x00f0ff, 0.8);
+    cpGfx.strokeRect(18, 16, 12, 36);
+    // Floating temporal diamond cap
+    cpGfx.fillStyle(0x00f0ff, 0.9);
+    cpGfx.beginPath();
+    cpGfx.moveTo(24, 2);
+    cpGfx.lineTo(34, 14);
+    cpGfx.lineTo(24, 26);
+    cpGfx.lineTo(14, 14);
+    cpGfx.closePath();
+    cpGfx.fillPath();
+    cpGfx.fillStyle(0xffffff, 1);
+    cpGfx.fillCircle(24, 14, 3);
+    cpGfx.generateTexture('checkpoint_beacon', 48, 72);
+    cpGfx.destroy();
+
+    // 27. Chrono Core Finale Reactor (96x96)
+    const coreGfx = this.make.graphics({ x: 0, y: 0, add: false });
+    // Outer containment housing
+    coreGfx.lineStyle(3, 0x1e293b, 1);
+    coreGfx.strokeCircle(48, 48, 44);
+    // Outer resonance ring
+    coreGfx.lineStyle(2, 0xa855f7, 0.85);
+    coreGfx.strokeCircle(48, 48, 38);
+    // Inner magnetic flux field
+    coreGfx.lineStyle(2.5, 0x00f0ff, 0.9);
+    coreGfx.strokeCircle(48, 48, 28);
+    // Temporal plasma singularity core
+    coreGfx.fillStyle(0x3b82f6, 0.5);
+    coreGfx.fillCircle(48, 48, 22);
+    coreGfx.fillStyle(0x00f0ff, 0.85);
+    coreGfx.fillCircle(48, 48, 14);
+    coreGfx.fillStyle(0xffffff, 1);
+    coreGfx.fillCircle(48, 48, 6);
+    // 4 radial stabilization pylons
+    coreGfx.lineStyle(3, 0x38bdf8, 0.9);
+    coreGfx.lineBetween(48, 4, 48, 20);
+    coreGfx.lineBetween(48, 76, 48, 92);
+    coreGfx.lineBetween(4, 48, 20, 48);
+    coreGfx.lineBetween(76, 48, 92, 48);
+    coreGfx.generateTexture('chrono_core_reactor', 96, 96);
+    coreGfx.destroy();
+
+    // 28. Mathematical Vector Trajectory Arrow (32x16)
+    const arrowGfx = this.make.graphics({ x: 0, y: 0, add: false });
+    arrowGfx.lineStyle(2, 0x00f0ff, 0.85);
+    arrowGfx.lineBetween(0, 8, 24, 8);
+    arrowGfx.beginPath();
+    arrowGfx.moveTo(24, 2);
+    arrowGfx.lineTo(32, 8);
+    arrowGfx.lineTo(24, 14);
+    arrowGfx.closePath();
+    arrowGfx.fillStyle(0x00f0ff, 0.9);
+    arrowGfx.fillPath();
+    arrowGfx.generateTexture('trajectory_arrow', 32, 16);
+    arrowGfx.destroy();
   }
 
   create() {
